@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0b1f" />
+  <title>绝世唐门RPG · 本地复刻</title>
+  <script>
+    window.appId = 'app_17dnukzxw22_local';
+    window.userId = '';
+    window.tenantId = '';
+    window.userName = '';
+    window.csrfToken = '';
+    window.ENVIRONMENT = 'local';
+    const basePath = location.pathname.replace(/\/game\/?$/, '/').replace(/\/index\.html$/, '/');
+    window.__BASENAME__ = basePath.replace(/\/$/, '') || '/';
+    // A fresh page must hydrate its saved character through the title screen first.
+    if (location.pathname !== basePath) history.replaceState(null, '', basePath + location.search);
+    const base = document.createElement('base');
+    base.href = basePath;
+    document.head.appendChild(base);
+    window._appInfo = { name: '绝世唐门RPG', description: '本地复刻版本' };
+  </script>
+  <link rel="stylesheet" href="assets/index-BhXGws93.css" />
+  <script type="module" src="assets/index-BJ1lHnkL.js"></script>
+</head>
+<body><div id="root"></div></body>
+</html>
