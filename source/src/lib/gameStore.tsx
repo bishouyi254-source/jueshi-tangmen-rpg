@@ -1,3 +1,4 @@
+import {dragonAction,dragonProgress,armorBonuses,evolutionMultiplier,reincarnateDragon} from '@/lib/dragonLegend';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react';
 import { scopedStorage, logger } from '@lark-apaas/client-toolkit-lite';
 import { toast } from 'sonner';
@@ -509,6 +510,8 @@ export interface IPendingSoulRing extends ISoulRing {
 
 // 玩家契约的魂灵
 export interface IPlayerSoulSpirit {
+  evolutionStage?: number;
+  evolutionYears?: number;
   spiritId: string; // 对应魂灵模板id
   name: string; // 魂灵名
   attribute: string; // 属性
@@ -692,6 +695,7 @@ function getDomainMultiplier(level: number): number {
 
 // 玩家数据
 export interface IPlayer {
+  dragonLegend?: import('./dragonLegend').DragonProgress;
   name: string;
   martialSoul: IMartialSoul;
   soulPower: number; // 先天魂力
@@ -1892,7 +1896,7 @@ export function calcAttributes(player: IPlayer): IAttrs {
        // 境界加成：初阶(0)+1.2%每重，逐大境界递增（v18.0 提升50%）
        const realmBonus = 0.012 + spirit.majorIndex * 0.0096; // 1.2% 起步，每大境界+0.96%
        const minorBonus = spirit.minor * 0.0024; // 每重+0.24%
-       let singleBonus = realmBonus + minorBonus;
+       let singleBonus = (realmBonus + minorBonus) * evolutionMultiplier(spirit);
        // 🔴 同属性魂灵加成 +50%：魂灵属性与主武魂属性相同/相生 或 主武魂为混沌/全属性
        const spiritElementNorm = normalizeElement(spirit.attribute);
        const affinity = calcElementAffinity(mainSoulElement, spirit.attribute);
@@ -2276,6 +2280,8 @@ export function calcAttributes(player: IPlayer): IAttrs {
       allAttrPct = Math.max(-0.9, allAttrPct - 0.8); // 下界保护：虚弱状态最多-80%
    }
 
+    const armorBonus=armorBonuses(player);
+    attack*=1+armorBonus.attack;defense*=1+armorBonus.defense;speed*=1+armorBonus.speed;spirit*=1+armorBonus.spirit;hp*=1+armorBonus.hp;
     // === 状态信息收集（供UI展示，解释战力波动原因）===
     const weaknessUntil = player.companions?.weaknessUntil ?? 0;
     const isWeak = weaknessUntil > Date.now();
@@ -3051,7 +3057,9 @@ export function calcSpiritBonusBreakdown(player: IPlayer): { attack: number; def
     // 境界加成：与 calcAttributes 完全一致 (v18.0 再提升50%)
     const realmBonus = 0.012 + spirit.majorIndex * 0.0096;
     const minorBonus = spirit.minor * 0.0024;
-    const singleBonus = realmBonus + minorBonus;
+    let singleBonus = (realmBonus + minorBonus) * evolutionMultiplier(spirit);
+    const mainElement=normalizeElement(player.martialSoul?.element);
+    if(mainElement==='混沌'||mainElement==='全属性'||normalizeElement(spirit.attribute)===mainElement||calcElementAffinity(player.martialSoul?.element,spirit.attribute)>=.15)singleBonus*=1.5;
     const attr = spirit.attribute;
     if (attr === '金' || attr === '土' || attr === '力量') { totalAtkPct += singleBonus; totalDefPct += singleBonus * 0.5; }
     else if (attr === '木' || attr === '生命') { totalHpPct += singleBonus * 1.5; totalDefPct += singleBonus * 0.5; }
@@ -4702,6 +4710,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         };
         if (data.martialSoul?.name && nameRenameMap[data.martialSoul.name]) data.martialSoul.name = nameRenameMap[data.martialSoul.name];
         if (data.secondSoul?.name && nameRenameMap[data.secondSoul.name]) data.secondSoul.name = nameRenameMap[data.secondSoul.name];
+        data.dragonLegend=dragonProgress(data);
         for(const soul of [data.martialSoul,data.secondSoul]) {if(soul?.name==='吞噬茶')soul.name='混沌无极';}
         if(data.reincarnation?.orbs)for(const orb of data.reincarnation.orbs)for(const soul of [orb.martialSoul,orb.secondSoul])if(soul?.name==='吞噬茶')soul.name='混沌无极';
         if(data.firstRingYearBonusGiven||data.companions?.details?.['tc-yinyangcha']?.firstRingYearBonusGiven)data.liangyiFirstBonusGiven=true;
@@ -6024,6 +6033,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         const newPlayer: IPlayer = {
           ...baseP,
+          dragonLegend: reincarnateDragon(player),
           name: finalName,
           direction: player.direction,
           isTwinSoul: isTwinAfterReroll,
@@ -9458,7 +9468,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // 提升后回满血
       const template = SOUL_SPIRIT_POOL.find((s) => s.id === spirit.spiritId);
       if (template) {
-        const stats = getSpiritStats(template, newSpirits[idx].majorIndex, newSpirits[idx].minor);
+        const stats = getSpiritStats(template, newSpirits[idx].majorIndex, newSpirits[idx].minor, newSpirits[idx].evolutionStage);
         newSpirits[idx].currentHp = stats.hp;
       }
       result = { success: true, reason: '' };
@@ -9495,7 +9505,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // 突破后回满血
       const template = SOUL_SPIRIT_POOL.find((s) => s.id === spirit.spiritId);
       if (template) {
-        const stats = getSpiritStats(template, newSpirits[idx].majorIndex, newSpirits[idx].minor);
+        const stats = getSpiritStats(template, newSpirits[idx].majorIndex, newSpirits[idx].minor, newSpirits[idx].evolutionStage);
         newSpirits[idx].currentHp = stats.hp;
       }
       result = { success: true, reason: '' };
@@ -11110,6 +11120,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (battleState) {
       setLastBattleResult({ phase: battleState.phase as 'victory' | 'defeat' | 'flee', battleType: battleState.battleType, locationId: battleState.locationId });
     }
+    const ascensionId=(battleState?.meta as any)?.ascension?.id;
     const bType = battleState?.battleType;
     const bPhase = battleState?.phase as 'victory' | 'defeat' | 'flee' | undefined;
     setBattleState(null);
@@ -11117,7 +11128,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 战斗结束后立即回满血
     setPlayer((p) => {
       const attrs = calcAttributes(p);
-      let np = { ...p };
+      let np = ascensionId ? dragonAction(p,{type:"leave",id:ascensionId}).player : { ...p };
       np.currentHp = attrs.hp; // 战斗结束回满/修正血量（可能因buff溢出超过上限）
       // 神考战斗结果处理
       if (bType && bPhase) {
@@ -11687,7 +11698,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }), [player, attributes, hasSave, loading, exploration, battleState, lastBattleResult, inBattle, clearNewAchievements, unlockedAchievementIds, getAchievementProgress, sweepExplore, getSweepCount, incrementSweepCount, getReincarnationShadow, hasShadowChallengedToday, startShadowChallenge, claimShadowVictory]);
 
   const localBattleLoaded=useRef(false);
-  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn'].includes(x.battle?.phase)&&x.battle.enemy?.hp>0){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&battleState?.battleType==='fierce-beast')localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
+  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&x.battle.enemy?.hp>0){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 

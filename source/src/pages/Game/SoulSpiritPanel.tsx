@@ -131,7 +131,7 @@ export default function SoulSpiritPanel() {
                  soulSpirits.map((spirit) => {
                   const tpl = SOUL_SPIRIT_POOL.find((s) => s.id === spirit.spiritId);
                   const colors = SPIRIT_ELEMENT_COLORS[spirit.attribute] || SPIRIT_ELEMENT_COLORS['金'];
-                  const stats = tpl ? getSpiritStats(tpl, spirit.majorIndex, spirit.minor) : null;
+                  const stats = tpl ? getSpiritStats(tpl, spirit.majorIndex, spirit.minor, spirit.evolutionStage) : null;
                   const isActive = activeSpiritIds.includes(spirit.spiritId);
                   return (
                     <motion.div
@@ -377,15 +377,15 @@ export default function SoulSpiritPanel() {
 
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="bg-slate-800/50 rounded-lg p-2">
-                    <div className="text-rose-400 font-bold">{formatNumber(getSpiritStats(template, selectedSpirit.majorIndex, selectedSpirit.minor).attack)}</div>
+                    <div className="text-rose-400 font-bold">{formatNumber(getSpiritStats(template, selectedSpirit.majorIndex, selectedSpirit.minor, selectedSpirit.evolutionStage).attack)}</div>
                     <div className="text-amber-100/50">攻击</div>
                   </div>
                   <div className="bg-slate-800/50 rounded-lg p-2">
-                    <div className="text-sky-400 font-bold">{formatNumber(getSpiritStats(template, selectedSpirit.majorIndex, selectedSpirit.minor).defense)}</div>
+                    <div className="text-sky-400 font-bold">{formatNumber(getSpiritStats(template, selectedSpirit.majorIndex, selectedSpirit.minor, selectedSpirit.evolutionStage).defense)}</div>
                     <div className="text-amber-100/50">防御</div>
                   </div>
                   <div className="bg-slate-800/50 rounded-lg p-2">
-                    <div className="text-emerald-400 font-bold">{formatNumber(getSpiritStats(template, selectedSpirit.majorIndex, selectedSpirit.minor).hp)}</div>
+                    <div className="text-emerald-400 font-bold">{formatNumber(getSpiritStats(template, selectedSpirit.majorIndex, selectedSpirit.minor, selectedSpirit.evolutionStage).hp)}</div>
                     <div className="text-amber-100/50">气血</div>
                   </div>
                 </div>

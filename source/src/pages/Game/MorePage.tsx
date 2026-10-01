@@ -18,6 +18,8 @@ interface MoreItem {
 }
 
 interface MorePageProps {
+  onOpenAscension?:()=>void;
+  onOpenForgeArmor?:()=>void;
   onOpenSettings: () => void;
   onOpenCraft: () => void;
   onOpenDomain: () => void;
@@ -45,7 +47,7 @@ const CATEGORIES: { key: CategoryKey; label: string; icon: typeof Sparkles; colo
   { key: 'system',  label: '系统设置', icon: Settings, color: 'text-muted-foreground' },
 ];
 
-export default function MorePage({ onOpenSettings, onOpenCraft, onOpenDomain, onOpenSoulSpirit, onOpenConvert, onOpenDivineTrial, onOpenArtifact, onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenAchievement, onOpenGodRealm, onOpenCompanions, onOpenCodex, onOpenLaws }: MorePageProps) {
+export default function MorePage({ onOpenAscension, onOpenForgeArmor, onOpenSettings, onOpenCraft, onOpenDomain, onOpenSoulSpirit, onOpenConvert, onOpenDivineTrial, onOpenArtifact, onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenAchievement, onOpenGodRealm, onOpenCompanions, onOpenCodex, onOpenLaws }: MorePageProps) {
   const { player, canEnterDivineTrials, canReincarnate } = useGame();
   const canCraft = player && player.level >= 10;
   const canDomain = player && player.level >= 70 && player.soulRings.length >= 7;
@@ -64,6 +66,8 @@ export default function MorePage({ onOpenSettings, onOpenCraft, onOpenDomain, on
 
   const allItems = useMemo<Record<CategoryKey, MoreItem[]>>(() => ({
     growth: [
+      {key:'ascension',label:'升灵台',desc:'试炼获取灵力，进化已契约魂灵',icon:Sparkles,iconColor:'text-cyan-300',iconBg:'bg-cyan-900/30',onClick:()=>onOpenAscension?.()},
+      {key:'forgeArmor',label:'锻造斗铠',desc:'采矿、千锻、灵锻，制作一字与二字斗铠',icon:Hammer,iconColor:'text-amber-300',iconBg:'bg-amber-900/30',onClick:()=>onOpenForgeArmor?.()},
       {
         key: 'achievement',
         label: '成就殿堂',

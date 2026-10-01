@@ -79,9 +79,9 @@ export function calcSpiritBreakthroughCost(majorIndex: number): number {
 }
 
 /** 根据境界计算魂灵实际战斗属性（v19.0 血厚攻低，辅助承伤定位） */
-export function getSpiritStats(spirit: ISoulSpirit, majorIndex: number, minor: number) {
+export function getSpiritStats(spirit: ISoulSpirit, majorIndex: number, minor: number, evolutionStage=0) {
   const totalTiers = majorIndex * 9 + (minor - 1);
-  const mult = Math.pow(1 + spirit.growthPerTier, totalTiers);
+  const mult = Math.pow(1 + spirit.growthPerTier, totalTiers) * (1+Math.min(5,Math.max(0,Math.floor(evolutionStage||0)))*.1);
   // v19.0 魂灵承伤定位：攻击再砍半，防御×1.5，血量×2.5，速度略降
   const atkReduce = 0.028;  // 攻击：整体再降 50%
   const defMul = 1.5;       // 防御：整体 ×1.5

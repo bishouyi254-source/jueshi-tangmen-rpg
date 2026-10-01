@@ -1,3 +1,4 @@
+import {dragonAction,dragonProgress,armorTier} from '@/lib/dragonLegend';
 import {__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus} from '@/lib/fierceEffects';
 import {__localShadowAction} from '@/lib/shadow';
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
@@ -662,7 +663,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
            .slice(0, 4)
            .map((s) => {
              const tpl = SOUL_SPIRIT_POOL.find((t) => t.id === s.spiritId);
-             const stats = getSpiritStats(tpl ?? SOUL_SPIRIT_POOL[0], s.majorIndex, s.minor);
+             const stats = getSpiritStats(tpl ?? SOUL_SPIRIT_POOL[0], s.majorIndex, s.minor, s.evolutionStage);
              const maxHp = Math.max(50, Math.round((attrs?.hp ?? 100) * (0.25 + s.majorIndex * 0.03) * (1 + s.minor * 0.02)));
              const atk = Math.max(5, Math.round(stats.attack * 0.8));
              const def = Math.max(3, Math.round(stats.defense * 0.8));
@@ -758,7 +759,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
          .slice(0, 4)
          .map((s) => {
            const tpl = SOUL_SPIRIT_POOL.find((t) => t.id === s.spiritId);
-           const stats = getSpiritStats(tpl ?? SOUL_SPIRIT_POOL[0], s.majorIndex, s.minor);
+           const stats = getSpiritStats(tpl ?? SOUL_SPIRIT_POOL[0], s.majorIndex, s.minor, s.evolutionStage);
            // 魂灵血量约为玩家的 30-50%，随境界提升
            const maxHp = Math.max(50, Math.round((attrs?.hp ?? 100) * (0.25 + s.majorIndex * 0.03) * (1 + s.minor * 0.02)));
            const atk = Math.max(5, Math.round(stats.attack * 0.8));
@@ -2108,6 +2109,7 @@ function __fbRestoreSpirits(spirits,saved) {
         clearTimeout(secondDomainAnimTimerRef.current);
         secondDomainAnimTimerRef.current = null;
       }
+       if((battleState?.meta as any)?.ascension){const trial=(battleState.meta as any).ascension;setPlayer(p=>dragonAction(p,{type:'win',id:trial.id}).player);addLog('升灵台试炼成功，灵力 +'+trial.reward,'system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
        if(battleState?.meta?.shadow){setRewards({items:[],soulBones:[],ring:null,exp:battleState.meta.expReward||0,coins:battleState.meta.coinReward||0});setVictoryStep('summary');setPhase('victory');return;}
        const isArenaOrExam = battleType === 'arena' || battleType === 'shrek-exam';
         const isSeaGod = battleType === 'sea-god';
@@ -3852,6 +3854,14 @@ function __fbRestoreSpirits(spirits,saved) {
               </div>
             </div>
 
+            {dragonProgress(player).equipped && armorTier(player)>=2 && <button style={{padding:12,borderRadius:10,background:'#403568',color:'white',width:'100%',marginBottom:10}} disabled={phase!=='playerTurn'||!!(battleState?.meta as any)?.armorUsed||currentSoulPower<Math.ceil(attrs.maxSoulPower*.1)} onClick={()=>{
+                if(phase!=='playerTurn'||actionLockRef.current||!__fbSkillAllowed()||(battleState?.meta as any)?.armorUsed)return;
+                const cost=Math.ceil(attrs.maxSoulPower*.1);if(currentSoulPower<cost)return;
+                actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-cost));
+                setPlayerHp(v=>Math.min(attrs.hp,v+Math.floor(attrs.hp*.03)));
+                setBattleState(prev=>prev?({...prev,meta:{...prev.meta,armorUsed:true}} as any):prev);
+                addLog('斗铠振奋：恢复最大气血3%，本次行动结束。','skill');scheduleEnemyAction(600);
+              }}>斗铠振奋 · 每场一次 · 魂力 {Math.ceil(attrs.maxSoulPower*.1)}</button>}
             {/* 操作按钮行：固定4列对称布局 — 普攻 / 领域 / 二领域 / 逃跑 */}
             <div className="grid grid-cols-4 gap-2 md:gap-3 w-full">
                <ActionButton

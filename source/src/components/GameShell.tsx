@@ -1,3 +1,4 @@
+import DragonLegendPanel from '@/pages/Game/DragonLegendPanel';
 import {__localBuildShadow} from '@/lib/shadow';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
@@ -48,7 +49,7 @@ const TAB_STORAGE_KEY = `game_active_tab_${getAppId() ?? 'app'}`;
 type TabValue =
   | 'character' | 'inventory' | 'map' | 'soulRing' | 'cultivation' | 'more'
    | 'shop' | 'craft' | 'domain' | 'convert' | 'divineTrial' | 'artifact' | 'soulSpirit' | 'settings' | 'reincarnation' | 'reincarnationHistory'
-  | 'achievement' | 'godRealm' | 'companions' | 'laws' | 'reincarnationShadow';
+  | 'achievement' | 'godRealm' | 'companions' | 'ascension' | 'forgeArmor' | 'laws' | 'reincarnationShadow';
 
 // 移动端底部导航（6个）
 const MOBILE_NAV_ITEMS: Array<{ value: TabValue; label: string; icon: typeof User }> = [
@@ -82,6 +83,8 @@ const SIDEBAR_GROUPS: Array<{
       { value: 'divineTrial', label: '神考', icon: Award },
       { value: 'godRealm', label: '神界', icon: Sparkles },
       { value: 'soulSpirit', label: '魂灵', icon: Ghost },
+      {value:'ascension',label:'升灵台',icon:Sparkles},
+      {value:'forgeArmor',label:'锻造斗铠',icon:Hammer},
       { value: 'companions', label: '侣', icon: HeartHandshake },
       { value: 'craft', label: '自制魂导器', icon: Hammer },
       { value: 'convert', label: '材料转换', icon: RefreshCw },
@@ -103,13 +106,13 @@ const SIDEBAR_GROUPS: Array<{
 
 // 所有有效 tab（用于 storage 校验）
 const ALL_VALID_TABS: TabValue[] = [
-  'character', 'inventory', 'map', 'soulRing', 'cultivation', 'more',
+  'character', 'inventory', 'map', 'soulRing', 'cultivation', 'more', 'ascension', 'forgeArmor',
   'reincarnationShadow', 'laws', 'shop', 'craft', 'domain', 'convert', 'divineTrial', 'artifact', 'soulSpirit', 'settings', 'reincarnation', 'reincarnationHistory', 'achievement', 'godRealm', 'companions','laws','reincarnationShadow',
 ];
 
 export default function GameShell() {
   const { player, attributes, loading, inBattle, battleState, exploration, abortExploration, setCurrentHp, endBattle, pendingFavorBeastId, startBattle } = useGame();
-  const [moreSub, setMoreSub] = useState<'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'laws' | null>(null);
+  const [moreSub, setMoreSub] = useState<'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'laws' | null>(null);
   const [showTopNotice, setShowTopNotice] = useState(() => {
     try {
       return scopedStorage.getItem('__douluo_top_notice_closed') !== '1';
@@ -246,7 +249,7 @@ export default function GameShell() {
   };
 
   // 更多页面内部跳转（移动端）
-  const openMoreSub = (sub: 'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'laws') => {
+  const openMoreSub = (sub: 'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'laws') => {
     setMoreSub(sub);
   };
 
@@ -272,9 +275,9 @@ export default function GameShell() {
       // 用 sessionStorage 记录我们自己 push 的层数
       try {
         const pushed = Number(sessionStorage.getItem('__douluo_stack_count') || '0');
-        if (pushed < 1) {
+        if (pushed < 1 || history.state?.overlay !== true) {
           history.pushState({ overlay: true }, '');
-          sessionStorage.setItem('__douluo_stack_count', String(pushed + 1));
+          sessionStorage.setItem('__douluo_stack_count', '1');
         }
       } catch {
         history.pushState({ overlay: true }, '');
@@ -285,7 +288,7 @@ export default function GameShell() {
         const pushed = Number(sessionStorage.getItem('__douluo_stack_count') || '0');
         if (pushed > 0) {
           // 回退对应步数
-          history.go(-pushed);
+          if (history.state?.overlay === true) history.go(-1);
           sessionStorage.setItem('__douluo_stack_count', '0');
         }
       } catch {
@@ -311,7 +314,7 @@ export default function GameShell() {
       try {
         const pushed = Number(sessionStorage.getItem('__douluo_stack_count') || '0');
         history.pushState({ overlay: true }, '');
-        sessionStorage.setItem('__douluo_stack_count', String(pushed + 1));
+        sessionStorage.setItem('__douluo_stack_count', '1');
       } catch {
         history.pushState({ overlay: true }, '');
       }
@@ -324,7 +327,7 @@ export default function GameShell() {
       try {
         const pushed = Number(sessionStorage.getItem('__douluo_stack_count') || '0');
         history.pushState({ overlay: true }, '');
-        sessionStorage.setItem('__douluo_stack_count', String(pushed + 1));
+        sessionStorage.setItem('__douluo_stack_count', '1');
       } catch {
         history.pushState({ overlay: true }, '');
       }
@@ -431,6 +434,8 @@ export default function GameShell() {
       case 'convert': return <MaterialConvertPanel onBack={() => handleDesktopNav('character')} />;
       case 'divineTrial': return <DivineTrialPanel onClose={() => handleDesktopNav('character')} />;
       case 'artifact': return <ArtifactPanel onClose={() => handleDesktopNav('character')} />;
+      case 'ascension': return <DragonLegendPanel mode="ascension"/>;
+      case 'forgeArmor': return <DragonLegendPanel mode="forge"/>;
       case 'soulSpirit': return <SoulSpiritPanel />;
       case 'settings': return <SettingsPanel onBack={() => handleDesktopNav('character')} />;
       case 'reincarnation': return <ReincarnationPanel onClose={() => handleDesktopNav('character')} onOpenHistory={() => setActiveTab('reincarnationHistory')} />;
@@ -445,6 +450,8 @@ export default function GameShell() {
         if (moreSub === 'settings') return <SettingsPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'craft') return <CraftPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'domain') return <DomainPanel onBack={() => setMoreSub(null)} />;
+        if(moreSub==='ascension')return <DragonLegendPanel mode="ascension"/>;
+        if(moreSub==='forgeArmor')return <DragonLegendPanel mode="forge"/>;
         if (moreSub === 'soulSpirit') return <SoulSpiritPanel />;
         if (moreSub === 'convert') return <MaterialConvertPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'divineTrial') return <DivineTrialPanel onClose={() => setMoreSub(null)} />;
@@ -470,6 +477,8 @@ export default function GameShell() {
              onOpenSettings={() => openMoreSub('settings')}
              onOpenCraft={() => openMoreSub('craft')}
              onOpenDomain={() => openMoreSub('domain')}
+             onOpenAscension={() => openMoreSub('ascension')}
+             onOpenForgeArmor={() => openMoreSub('forgeArmor')}
              onOpenSoulSpirit={() => openMoreSub('soulSpirit')}
              onOpenConvert={() => openMoreSub('convert')}
              onOpenDivineTrial={() => openMoreSub('divineTrial')}
@@ -933,7 +942,7 @@ function getPageTitle(tab: TabValue): string {
     convert: '材料转换',
     divineTrial: '神考',
     artifact: '神器',
-    soulSpirit: '魂灵',
+    soulSpirit: '魂灵', ascension:'升灵台', forgeArmor:'锻造斗铠',
     reincarnation: '转世轮回',
     reincarnationHistory: '轮回史鉴',
     settings: '设置',
@@ -944,3 +953,4 @@ function getPageTitle(tab: TabValue): string {
   };
   return titles[tab] || '角色';
 }
+
