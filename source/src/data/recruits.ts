@@ -1,0 +1,1 @@
+export const MOCK_RECRUITS=[]; export interface IRecruit {id:string;[key:string]:any}

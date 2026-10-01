@@ -1,0 +1,2 @@
+import {build} from 'esbuild';import path from 'node:path';import {fileURLToPath} from 'node:url';process.chdir(path.dirname(fileURLToPath(import.meta.url)));
+await build({absWorkingDir:process.cwd(),entryPoints:['src/index.tsx'],bundle:true,minify:true,format:'esm',jsx:'automatic',outfile:'../assets/replica-628.js',alias:{'@lark-apaas/client-toolkit-lite':path.resolve('src/toolkit-local.tsx')},sourcemap:true,logLevel:'info'});

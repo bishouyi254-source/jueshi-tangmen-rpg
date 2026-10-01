@@ -1,0 +1,7 @@
+overrides:
+  motion-dom: 12.23.21
+  motion-utils: 12.23.6
+onlyBuiltDependencies:
+  - esbuild
+allowBuilds:
+  esbuild: set this to true or false
