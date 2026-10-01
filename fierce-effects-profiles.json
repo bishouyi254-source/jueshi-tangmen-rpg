@@ -1,0 +1,661 @@
+{
+  "di-tian": {
+    "id": "di-tian",
+    "name": "帝天",
+    "skills": [
+      "黑龙爪",
+      "龙威震慑",
+      "黑龙护体",
+      "暗龙之怒",
+      "龙息吐息",
+      "黑暗龙域",
+      "武魂真身·金眼黑龙",
+      "龙神之威",
+      "黑龙吞天"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "stun",
+            "type": "stun",
+            "label": "眩晕",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.25,
+            "negative": true
+          }
+        ]
+      },
+      "3": {
+        "nonDamage": true,
+        "self": [
+          {
+            "id": "reduction",
+            "type": "reduction",
+            "label": "减伤",
+            "value": 0.2,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      },
+      "9": {
+        "lifesteal": 0.2
+      }
+    }
+  },
+  "xie-di": {
+    "id": "xie-di",
+    "name": "邪帝",
+    "skills": [
+      "精神冲击",
+      "邪眼凝视",
+      "灵魂撕裂",
+      "精神风暴",
+      "幻魔之眼",
+      "暴君之怒",
+      "武魂真身·邪眼暴君",
+      "精神湮灭",
+      "邪眼主宰"
+    ],
+    "attr": "spirit",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "silence",
+            "type": "silence",
+            "label": "沉默",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.3,
+            "negative": true
+          }
+        ]
+      },
+      "3": {
+        "target": [
+          {
+            "id": "vulnerable",
+            "type": "vulnerable",
+            "label": "易伤",
+            "value": 0.15,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      },
+      "8": {
+        "manaDrain": 0.1
+      }
+    }
+  },
+  "bi-ji": {
+    "id": "bi-ji",
+    "name": "碧姬",
+    "skills": [
+      "翠羽回春",
+      "翡翠护体",
+      "生命祝福",
+      "圣光治愈",
+      "天鹅之舞",
+      "生命领域",
+      "武魂真身·翡翠天鹅",
+      "万物复苏",
+      "生命赞歌"
+    ],
+    "attr": "spirit",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "nonDamage": true,
+        "shield": 0.03
+      },
+      "4": {
+        "nonDamage": true,
+        "heal": 0.02
+      },
+      "8": {
+        "nonDamage": true,
+        "cleanse": true,
+        "self": [
+          {
+            "id": "regen",
+            "type": "hot",
+            "label": "持续治疗",
+            "value": 0.01,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      }
+    }
+  },
+  "wan-yao-wang": {
+    "id": "wan-yao-wang",
+    "name": "万妖王",
+    "skills": [
+      "毒藤缠绕",
+      "妖眼幻术",
+      "剧毒之触",
+      "万藤穿心",
+      "精神毒雾",
+      "妖王领域",
+      "武魂真身·妖眼魔树",
+      "万毒噬心",
+      "妖眼灭世"
+    ],
+    "attr": "spirit",
+    "immortal": false,
+    "rules": {
+      "1": {
+        "target": [
+          {
+            "id": "slow",
+            "type": "slow",
+            "label": "减速",
+            "value": 0.2,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      },
+      "3": {
+        "target": [
+          {
+            "id": "poison",
+            "type": "dot",
+            "label": "中毒",
+            "value": 0,
+            "turns": 3,
+            "negative": true,
+            "scale": 0.5
+          }
+        ]
+      },
+      "8": {
+        "target": [
+          {
+            "id": "antiHeal",
+            "type": "antiHeal",
+            "label": "禁疗",
+            "value": 0.5,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      }
+    }
+  },
+  "xiong-jun": {
+    "id": "xiong-jun",
+    "name": "熊君",
+    "skills": [
+      "恐爪撕裂",
+      "暗金咆哮",
+      "熊王护体",
+      "巨力拍击",
+      "破山一击",
+      "金刚之身",
+      "武魂真身·暗金恐爪熊",
+      "暗金恐爪",
+      "熊君临世"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "1": {
+        "target": [
+          {
+            "id": "armorDown",
+            "type": "armorDown",
+            "label": "破甲",
+            "value": 0.2,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      },
+      "6": {
+        "nonDamage": true,
+        "self": [
+          {
+            "id": "reduction",
+            "type": "reduction",
+            "label": "减伤",
+            "value": 0.15,
+            "turns": 2,
+            "negative": false
+          },
+          {
+            "id": "reflect",
+            "type": "reflect",
+            "label": "反伤",
+            "value": 0.2,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      },
+      "8": {
+        "penetration": 0.3
+      }
+    }
+  },
+  "chi-wang": {
+    "id": "chi-wang",
+    "name": "赤王",
+    "skills": [
+      "赤焰撕咬",
+      "三火焰",
+      "魔獒护体",
+      "烈焰冲击",
+      "赤焰领域",
+      "赤炎爆裂",
+      "武魂真身·三头赤魔獒",
+      "焚天烈焰",
+      "三头齐鸣"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "parts": 3
+      },
+      "8": {
+        "target": [
+          {
+            "id": "burn",
+            "type": "dot",
+            "label": "灼烧",
+            "value": 0,
+            "turns": 3,
+            "negative": true,
+            "scale": 0.5
+          }
+        ]
+      },
+      "9": {
+        "nonDamage": true,
+        "self": [
+          {
+            "id": "attackUp",
+            "type": "attackUp",
+            "label": "攻击增益",
+            "value": 0.2,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      }
+    }
+  },
+  "zi-ji": {
+    "id": "zi-ji",
+    "name": "紫姬",
+    "skills": [
+      "魔龙爪",
+      "地狱冥火",
+      "魔龙之威",
+      "黑暗吞噬",
+      "魔龙吐息",
+      "地狱领域",
+      "武魂真身·地狱魔龙",
+      "魔光灭世",
+      "地狱降临"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "burn",
+            "type": "dot",
+            "label": "灼烧",
+            "value": 0,
+            "turns": 2,
+            "negative": true,
+            "scale": 0.5
+          },
+          {
+            "id": "antiHeal",
+            "type": "antiHeal",
+            "label": "禁疗",
+            "value": 0.3,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      },
+      "4": {
+        "lifesteal": 0.25
+      },
+      "8": {
+        "execute": 0.25
+      }
+    }
+  },
+  "gui-di": {
+    "id": "gui-di",
+    "name": "鬼帝",
+    "skills": [
+      "亡灵召唤",
+      "寂灭之光",
+      "骸骨护盾",
+      "死亡凝视",
+      "亡灵大军",
+      "寂灭领域",
+      "武魂真身·亡灵寂灭者",
+      "生死轮转",
+      "万魂寂灭"
+    ],
+    "attr": "attack",
+    "immortal": true,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "decay",
+            "type": "dot",
+            "label": "寂灭侵蚀",
+            "value": 0,
+            "turns": 3,
+            "negative": true,
+            "scale": 0.5
+          }
+        ]
+      },
+      "4": {
+        "target": [
+          {
+            "id": "silence",
+            "type": "silence",
+            "label": "沉默",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.25,
+            "negative": true
+          }
+        ]
+      },
+      "8": {
+        "nonDamage": true,
+        "shield": 0.03
+      }
+    }
+  },
+  "tao-tie": {
+    "id": "tao-tie",
+    "name": "饕餮",
+    "skills": [
+      "饕餮噬咬",
+      "吞噬万物",
+      "饕餮之躯",
+      "吞天巨口",
+      "胃液消融",
+      "饕餮领域",
+      "武魂真身·饕餮",
+      "一口吞尽",
+      "饕餮降世"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "lifesteal": 0.25
+      },
+      "3": {
+        "nonDamage": true,
+        "shield": 0.03
+      },
+      "8": {
+        "manaDrain": 0.1,
+        "manaSteal": true
+      }
+    }
+  },
+  "qing-jiao": {
+    "id": "qing-jiao",
+    "name": "青蛟王",
+    "skills": [
+      "蛟尾横扫",
+      "雷霆一击",
+      "青蛟护体",
+      "雷电缠绕",
+      "雷霆咆哮",
+      "雷暴领域",
+      "武魂真身·青金蛟",
+      "万雷齐发",
+      "青蛟化龙"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "stun",
+            "type": "stun",
+            "label": "眩晕",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.25,
+            "negative": true
+          }
+        ]
+      },
+      "4": {
+        "target": [
+          {
+            "id": "slow",
+            "type": "slow",
+            "label": "减速",
+            "value": 0.2,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      },
+      "8": {
+        "chase": 0.3
+      }
+    }
+  },
+  "xue-di": {
+    "id": "xue-di",
+    "name": "雪帝",
+    "skills": [
+      "雪舞极冰",
+      "寒冰封冻",
+      "雪女护体",
+      "暴风雪",
+      "绝对零度",
+      "极寒领域",
+      "武魂真身·冰天雪女",
+      "雪帝三绝",
+      "冰雪降临"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "freeze",
+            "type": "freeze",
+            "label": "冻结",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.35,
+            "negative": true
+          }
+        ]
+      },
+      "3": {
+        "nonDamage": true,
+        "shield": 0.03
+      },
+      "4": {
+        "target": [
+          {
+            "id": "slow",
+            "type": "slow",
+            "label": "减速",
+            "value": 0.25,
+            "turns": 2,
+            "negative": true
+          }
+        ]
+      }
+    }
+  },
+  "bing-di": {
+    "id": "bing-di",
+    "name": "冰帝",
+    "skills": [
+      "冰蝎尾钩",
+      "翡翠冰刃",
+      "帝皇护体",
+      "冰爆术",
+      "永冻之域",
+      "帝皇之威",
+      "武魂真身·冰碧帝皇蝎",
+      "冰碧之光",
+      "帝皇寒极"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "1": {
+        "target": [
+          {
+            "id": "freeze",
+            "type": "freeze",
+            "label": "冻结",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.25,
+            "negative": true
+          }
+        ]
+      },
+      "2": {
+        "penetration": 0.25
+      },
+      "3": {
+        "nonDamage": true,
+        "self": [
+          {
+            "id": "reflect",
+            "type": "reflect",
+            "label": "反伤",
+            "value": 0.2,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      }
+    }
+  },
+  "xiao-bai": {
+    "id": "xiao-bai",
+    "name": "小白",
+    "skills": [
+      "鲨齿撕咬",
+      "寒冰吐息",
+      "魔鲨之躯",
+      "海啸冰浪",
+      "深海寒冰",
+      "鲨歌领域",
+      "武魂真身·魔魂大白鲨",
+      "冰封万里",
+      "魔鲨吞天"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "1": {
+        "target": [
+          {
+            "id": "bleed",
+            "type": "dot",
+            "label": "流血",
+            "value": 0,
+            "turns": 3,
+            "negative": true,
+            "scale": 0.5
+          }
+        ]
+      },
+      "4": {
+        "parts": 2
+      },
+      "9": {
+        "execute": 0.2
+      }
+    }
+  },
+  "bing-feng-wang": {
+    "id": "bing-feng-wang",
+    "name": "冰凰",
+    "skills": [
+      "冰凰俯冲",
+      "凤舞冰天",
+      "冰晶凰羽",
+      "涅槃冰封",
+      "寒焰之翼",
+      "冰凰领域",
+      "武魂真身·冰凰",
+      "九天冷凰",
+      "万载寒冰"
+    ],
+    "attr": "attack",
+    "immortal": false,
+    "rules": {
+      "2": {
+        "target": [
+          {
+            "id": "freeze",
+            "type": "freeze",
+            "label": "冻结",
+            "value": 0,
+            "turns": 1,
+            "chance": 0.3,
+            "negative": true
+          }
+        ]
+      },
+      "3": {
+        "nonDamage": true,
+        "self": [
+          {
+            "id": "reduction",
+            "type": "reduction",
+            "label": "减伤",
+            "value": 0.2,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      },
+      "4": {
+        "nonDamage": true,
+        "self": [
+          {
+            "id": "regen",
+            "type": "hot",
+            "label": "持续治疗",
+            "value": 0.01,
+            "turns": 2,
+            "negative": false
+          }
+        ]
+      }
+    }
+  }
+}
