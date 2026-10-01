@@ -1187,7 +1187,7 @@ function __fbEnemyAction(state,context={},rng=Math.random) {
   if(start.skip){__fbFinish(s,'enemy');return {next:s,logs,damage:0,nonDamage:true,skillName:'无法行动',target:'player'};}
   for(const key of Object.keys(s.cooldowns))s.cooldowns[key]=Math.max(0,s.cooldowns[key]-1);
   const available=profile.skills.map((name,i)=>({name,slot:i+1})).filter(x=>!s.cooldowns[x.slot]&&a.mana>=x.slot*60);
-  const useSkill=available.length>0&&rng()<.3;
+  const useSkill=available.length>0&&rng()<.75;
   const choice=useSkill?available[Math.min(available.length-1,Math.floor(rng()*available.length))]:{name:'普通攻击',slot:0};
   const rule=profile.rules[choice.slot]||{},target=context.target||'player',t=s.actors[target];
   if(!t||t.hp<=0){__fbFinish(s,'enemy');return {next:s,logs,damage:0,nonDamage:true,skillName:choice.name,target};}
