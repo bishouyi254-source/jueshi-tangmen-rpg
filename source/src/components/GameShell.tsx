@@ -1,3 +1,4 @@
+import { formatNumber } from '@/lib/utils';
 import DragonLegendPanel from '@/pages/Game/DragonLegendPanel';
 import {__localBuildShadow} from '@/lib/shadow';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -533,7 +534,7 @@ export default function GameShell() {
           <div className="flex items-center gap-2 shrink-0">
             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/15 border border-amber-400/30">
               <Coins className="w-3.5 h-3.5 text-amber-400" fill="currentColor" />
-              <span className="text-xs font-semibold text-amber-300 tabular-nums">{Number(player.soulCoins).toLocaleString()}</span>
+              <span className="text-xs font-semibold text-amber-300 tabular-nums">{formatNumber(player.soulCoins)}</span>
             </div>
           </div>
         </div>
@@ -769,7 +770,7 @@ export default function GameShell() {
           {/* 魂币 */}
           <div className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-400/20">
             <Coins className="w-4 h-4 text-amber-400" fill="currentColor" />
-            <span className="text-sm font-semibold text-amber-300 tabular-nums flex-1">{Number(player.soulCoins).toLocaleString()}</span>
+            <span className="text-sm font-semibold text-amber-300 tabular-nums flex-1">{formatNumber(player.soulCoins)}</span>
             <span className="text-[10px] text-amber-400/70">魂币</span>
           </div>
         </div>

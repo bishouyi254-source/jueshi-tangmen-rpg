@@ -146,7 +146,7 @@ export default memo(function ReincarnationPanel({ onClose, onOpenHistory }: Rein
        const { primary, secondary, isTwin } = rollTwinSouls({});
        let finalSecond: IMartialSoul | null = secondary;
        let finalIsTwin = isTwin;
-       // 🔴 严格单武魂守卫：主武魂是两仪神剑/罗三炮时，强制清除第二武魂（不触发保底）
+       // 🔴 严格单武魂守卫：主武魂是罗三炮时，强制清除第二武魂（不触发保底）
        if (!isStrictlySingleSoul(primary) && player.isTwinSoul && !isTwin && Math.random() < 0.5) {
          let second = rollTwinSouls({}).primary;
          for (let i = 0; i < 10; i++) {

@@ -812,23 +812,23 @@ export default function CharacterPanel() {
                <div className="grid grid-cols-5 gap-1 text-[9px] mb-2">
                  <div className="rounded bg-purple-500/10 px-1.5 py-1 text-center">
                    <div className="text-purple-200/70">攻击</div>
-                   <div className="text-purple-300 font-bold tabular-nums">+{player.devour.totalAttack?.toLocaleString() || 0}</div>
+                   <div className="text-purple-300 font-bold tabular-nums">+{formatNumber(player.devour.totalAttack || 0)}</div>
                  </div>
                  <div className="rounded bg-purple-500/10 px-1.5 py-1 text-center">
                    <div className="text-purple-200/70">防御</div>
-                   <div className="text-purple-300 font-bold tabular-nums">+{player.devour.totalDefense?.toLocaleString() || 0}</div>
+                   <div className="text-purple-300 font-bold tabular-nums">+{formatNumber(player.devour.totalDefense || 0)}</div>
                  </div>
                  <div className="rounded bg-purple-500/10 px-1.5 py-1 text-center">
                    <div className="text-purple-200/70">速度</div>
-                   <div className="text-purple-300 font-bold tabular-nums">+{player.devour.totalSpeed?.toLocaleString() || 0}</div>
+                   <div className="text-purple-300 font-bold tabular-nums">+{formatNumber(player.devour.totalSpeed || 0)}</div>
                  </div>
                  <div className="rounded bg-purple-500/10 px-1.5 py-1 text-center">
                    <div className="text-purple-200/70">精神</div>
-                   <div className="text-purple-300 font-bold tabular-nums">+{player.devour.totalSpirit?.toLocaleString() || 0}</div>
+                   <div className="text-purple-300 font-bold tabular-nums">+{formatNumber(player.devour.totalSpirit || 0)}</div>
                  </div>
                  <div className="rounded bg-purple-500/10 px-1.5 py-1 text-center">
                    <div className="text-purple-200/70">血量</div>
-                   <div className="text-purple-300 font-bold tabular-nums">+{player.devour.totalHp?.toLocaleString() || 0}</div>
+                   <div className="text-purple-300 font-bold tabular-nums">+{formatNumber(player.devour.totalHp || 0)}</div>
                  </div>
                </div>
                {player.devour.backlashCount > 0 && (
@@ -844,23 +844,23 @@ export default function CharacterPanel() {
                    <div className="grid grid-cols-5 gap-1 text-[9px]">
                      <div className="rounded bg-red-500/10 px-1.5 py-1 text-center">
                        <div className="text-red-300/70">攻击</div>
-                       <div className="text-red-400 font-bold tabular-nums">-{player.devour.backlashAttack?.toLocaleString() || 0}</div>
+                       <div className="text-red-400 font-bold tabular-nums">-{formatNumber(player.devour.backlashAttack || 0)}</div>
                      </div>
                      <div className="rounded bg-red-500/10 px-1.5 py-1 text-center">
                        <div className="text-red-300/70">防御</div>
-                       <div className="text-red-400 font-bold tabular-nums">-{player.devour.backlashDefense?.toLocaleString() || 0}</div>
+                       <div className="text-red-400 font-bold tabular-nums">-{formatNumber(player.devour.backlashDefense || 0)}</div>
                      </div>
                      <div className="rounded bg-red-500/10 px-1.5 py-1 text-center">
                        <div className="text-red-300/70">速度</div>
-                       <div className="text-red-400 font-bold tabular-nums">-{player.devour.backlashSpeed?.toLocaleString() || 0}</div>
+                       <div className="text-red-400 font-bold tabular-nums">-{formatNumber(player.devour.backlashSpeed || 0)}</div>
                      </div>
                      <div className="rounded bg-red-500/10 px-1.5 py-1 text-center">
                        <div className="text-red-300/70">精神</div>
-                       <div className="text-red-400 font-bold tabular-nums">-{player.devour.backlashSpirit?.toLocaleString() || 0}</div>
+                       <div className="text-red-400 font-bold tabular-nums">-{formatNumber(player.devour.backlashSpirit || 0)}</div>
                      </div>
                      <div className="rounded bg-red-500/10 px-1.5 py-1 text-center">
                        <div className="text-red-300/70">血量</div>
-                       <div className="text-red-400 font-bold tabular-nums">-{player.devour.backlashHp?.toLocaleString() || 0}</div>
+                       <div className="text-red-400 font-bold tabular-nums">-{formatNumber(player.devour.backlashHp || 0)}</div>
                      </div>
                    </div>
                  </div>

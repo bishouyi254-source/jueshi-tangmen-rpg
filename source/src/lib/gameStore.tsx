@@ -1,3 +1,4 @@
+import { hasDefeatedHundun, reconcileGodUnlock } from '@/lib/godUnlock';
 import {dragonAction,dragonProgress,armorBonuses,evolutionMultiplier,reincarnateDragon} from '@/lib/dragonLegend';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react';
 import { scopedStorage, logger } from '@lark-apaas/client-toolkit-lite';
@@ -776,6 +777,8 @@ export interface IPlayer {
   easterRealmStage: number;
   // 两仪神剑首次击败阴阳茶奖励是否已发放（顶层持久化）
   liangyiFirstBonusGiven?: boolean;
+  /** 本世击败混沌茶；独立于可移除的伴侣记录。 */
+  hundunChaDefeated?: boolean;
    /** 一键扫荡探索次数记录：key 为区域标识（如 star-outer / beiji-inner / million-year），value 为累计进入次数 */
    sweepExploreCounts?: Record<string, number>;
    /** 每日轮回之影挑战是否已使用：日期字符串 'YYYY-MM-DD' */
@@ -3354,7 +3357,7 @@ const SINGLE_SOUL_NAMES = ['罗三炮'];
 
 /**
  * 🔴 严格单武魂守卫：任何设置第二武魂的入口必须经过此检查
- * - 两仪神剑：永远单武魂
+ * - 两仪神剑：支持双生，主修与次修均可触发天赋
  * - 罗三炮：永远单武魂（进化为耀阳圣龙后限制解除，但已单武魂即成事实）
  * 返回是否为单武魂（true 表示强制单武魂，禁止有第二武魂）
  */
@@ -3382,14 +3385,14 @@ export function enforceSingleSoul(
   * - 两个武魂独立按品质概率抽取
   * - 第二个武魂品质可与第一个不同
   * - 保证两个武魂不会相同
-  * - 🔴 严格单武魂守卫：两仪神剑/罗三炮强制单武魂
+  * - 🔴 严格单武魂守卫：罗三炮强制单武魂
  */
 export function rollTwinSouls(opts?: { excludeNames?: string[] }): { primary: IMartialSoul; secondary: IMartialSoul | null; isTwin: boolean } {
   // 用独立的随机源判断是否双生（与武魂抽取出独立）
   let isTwin = secureRandom() < TWIN_SOUL_CHANCE;
   const primary = rollMartialSoul(opts);
 
-  // 🔴 严格单武魂守卫：罗三炮 / 两仪神剑 强制单武魂（多重保险第一层）
+  // 🔴 严格单武魂守卫：罗三炮强制单武魂（多重保险第一层）
   if (isStrictlySingleSoul(primary)) {
     isTwin = false;
   }
@@ -3401,7 +3404,7 @@ export function rollTwinSouls(opts?: { excludeNames?: string[] }): { primary: IM
    // 第二个武魂：品质加权抽取，且与第一个不同（独立随机）
    let secondary = rollDifferentMartialSoulWeighted(primary);
    // 🔴 至高神级双生（0.1%）：第一武魂是至高神级且非严格单武魂时，小概率第二武魂也是至高神级
-   // 两仪神剑是严格单武魂，走不到这里；吞噬茶可以双生，符合条件
+   // 两仪神剑支持双生；至高神级次修仍按当前抽取规则生成
    const isPrimarySupreme = primary.quality === 'supremeDivine';
    if (isPrimarySupreme && secureRandom() >= TWIN_SUPREME_DIVINE_CHANCE) {
      // 未中 0.1% 至高双生 → 第二武魂不能是至高神级（通过排除法重抽）
@@ -4710,6 +4713,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         };
         if (data.martialSoul?.name && nameRenameMap[data.martialSoul.name]) data.martialSoul.name = nameRenameMap[data.martialSoul.name];
         if (data.secondSoul?.name && nameRenameMap[data.secondSoul.name]) data.secondSoul.name = nameRenameMap[data.secondSoul.name];
+        data = reconcileGodUnlock(data);
         data.dragonLegend=dragonProgress(data);
         for(const soul of [data.martialSoul,data.secondSoul]) {if(soul?.name==='吞噬茶')soul.name='混沌无极';}
         if(data.reincarnation?.orbs)for(const orb of data.reincarnation.orbs)for(const soul of [orb.martialSoul,orb.secondSoul])if(soul?.name==='吞噬茶')soul.name='混沌无极';
@@ -5859,7 +5863,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   const createPlayer = (name: string, direction: string, soul: IMartialSoul, soulPower: number, secondSoul: IMartialSoul | null = null) => {
-    // 🔴 严格单武魂守卫：主武魂是两仪神剑/罗三炮时，强制清除第二武魂（多重保险第三层）
+    // 🔴 严格单武魂守卫：主武魂是罗三炮时，强制清除第二武魂（多重保险第三层）
     const guarded = enforceSingleSoul(soul, secondSoul);
     let p = createNewPlayer(name, direction, guarded.primary, soulPower);
     if (guarded.secondary) {
@@ -5994,7 +5998,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
               // 🔴 修复：转生 reroll 的双生判定调整
               // 原本是双生武魂玩家未抽中时：50%概率保底仍是双生（不是100%保底）
               // 让玩家在转生时有机会体验单武魂
-              // 🔴 严格单武魂守卫：主武魂是两仪神剑/罗三炮时，绝对不能保底补第二武魂（多重保险第五层）
+              // 🔴 严格单武魂守卫：主武魂是罗三炮时，绝对不能保底补第二武魂（多重保险第五层）
                if (rollResult.isTwin && rollResult.secondary) {
                  newSecondSoul = rollResult.secondary;
                  } else if (player.isTwinSoul && !isStrictlySingleSoul(newMainSoul) && secureRandom() < 0.5) {
@@ -6837,7 +6841,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             let newDivTrial = p.divineTrial;
             if (!glp?.unlocked && p.divineTrial?.inherited) {
               const hundunDetail = p.companions?.details?.['tc-hunduncha'];
-              if (hundunDetail?.hundunChaDefeated) {
+              if (hasDefeatedHundun(p)) {
                 const trial = DIVINE_TRIALS.find(t => t.id === p.divineTrial!.chosenTrialId);
                 const tier = (trial?.tier as 'second' | 'first' | 'king' | 'supreme') || 'second';
                 const cap = getGodLevelCap(tier);
@@ -8518,8 +8522,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       }
 
-       return {
+       return reconcileGodUnlock({
          ...p,
+         ...(isHundunCha ? { hundunChaDefeated: true } : {}),
          soulRings: newSoulRings,
          secondSoulRings: newSecondSoulRings,
          // 两仪神剑首次击败阴阳茶奖励标记（顶层持久化）
@@ -8567,7 +8572,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
               },
             }
         ),
-      };
+      });
     });
      return { success: true, favorGain: actualGain, oneTimeVictory: isOneTimeVictory, artifactItemName: artifactItemTemplate?.name };
    };
@@ -8749,7 +8754,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (!p.divineTrial?.inherited) return p;
       // 确认击败过混沌茶（在伴侣details中）
       const hundunDetail = p.companions?.details?.['tc-hunduncha'];
-      if (!hundunDetail || !hundunDetail.hundunChaDefeated) return p;
+      if (!hasDefeatedHundun(p)) return p;
+      if (p.divineTrial.godLevelProgress?.unlocked) return p;
       const trial = DIVINE_TRIALS.find((t) => t.id === p.divineTrial!.chosenTrialId);
       const tier = (trial?.tier as 'second' | 'first' | 'king' | 'supreme') || 'second';
       const cap = getGodLevelCap(tier);
@@ -8771,7 +8777,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const canUnlockGodLevel = (): boolean => {
     if (!player?.divineTrial?.inherited) return false;
     const hundunDetail = player.companions?.details?.['tc-hunduncha'];
-    if (!hundunDetail?.hundunChaDefeated) return false;
+    if (!hasDefeatedHundun(player)) return false;
     return true;
   };
 
@@ -10446,7 +10452,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
          if (!existingPositions.includes(dt.chosenTrialId)) {
            existingPositions.push(dt.chosenTrialId);
          }
-         return {
+         return reconcileGodUnlock({
            ...p,
            level: newLevel,
            currentHp: attrs.hp,
@@ -10466,7 +10472,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
              ...(p.godRealm ?? { unlocked: false, defeatedIds: [], divineCoreCrafted: false }),
              unlocked: true, // 继承神位后自动开启神界
            },
-         };
+         });
      });
      return result;
    };

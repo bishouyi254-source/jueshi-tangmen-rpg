@@ -3216,7 +3216,7 @@ function __fbRestoreSpirits(spirits,saved) {
                           className="text-4xl font-black text-red-400 tabular-nums drop-shadow-lg"
                           style={{ textShadow: '0 0 20px rgba(248,113,113,0.6)' }}
                         >
-                          -{devourDialog.backlashValue?.toLocaleString()}
+                          -{formatNumber(devourDialog.backlashValue || 0)}
                         </motion.div>
                         <motion.div
                           initial={{ opacity: 0 }}
@@ -3246,7 +3246,7 @@ function __fbRestoreSpirits(spirits,saved) {
                     <div className="text-center space-y-2 py-3">
                       <div className="text-xs text-muted-foreground">获得属性</div>
                       <div className="text-3xl font-black text-purple-300 tabular-nums">
-                        +{devourDialog.value?.toLocaleString()}
+                        +{formatNumber(devourDialog.value || 0)}
                       </div>
                       <div className="text-base font-bold text-foreground">{devourDialog.attrLabel}</div>
                       <div className="text-[11px] text-purple-300/80 mt-2">已永久加入角色属性</div>

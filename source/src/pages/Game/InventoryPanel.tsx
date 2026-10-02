@@ -888,7 +888,7 @@ export default function InventoryPanel() {
                          <div key={attr.key} className="flex justify-between">
                            <span className="text-muted-foreground">{attr.label}</span>
                            <span className={attr.isPercent ? 'text-cyan-300 font-medium' : 'text-purple-400 font-medium'}>
-                             +{attr.isPercent ? `${val}%` : val.toLocaleString()}
+                             +{attr.isPercent ? `${val}%` : formatNumber(val)}
                            </span>
                          </div>
                        );
@@ -1073,43 +1073,43 @@ export default function InventoryPanel() {
                            {extra.fixedBonus?.attack !== undefined && extra.fixedBonus.attack > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">攻击</span>
-                               <span className="text-red-400 font-medium">+{Number(extra.fixedBonus.attack).toLocaleString()}</span>
+                               <span className="text-red-400 font-medium">+{formatNumber(Number(extra.fixedBonus.attack))}</span>
                              </div>
                            )}
                            {extra.fixedBonus?.defense !== undefined && extra.fixedBonus.defense > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">防御</span>
-                               <span className="text-blue-400 font-medium">+{Number(extra.fixedBonus.defense).toLocaleString()}</span>
+                               <span className="text-blue-400 font-medium">+{formatNumber(Number(extra.fixedBonus.defense))}</span>
                              </div>
                            )}
                            {extra.fixedBonus?.speed !== undefined && extra.fixedBonus.speed > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">速度</span>
-                               <span className="text-green-400 font-medium">+{Number(extra.fixedBonus.speed).toLocaleString()}</span>
+                               <span className="text-green-400 font-medium">+{formatNumber(Number(extra.fixedBonus.speed))}</span>
                              </div>
                            )}
                            {extra.fixedBonus?.spirit !== undefined && extra.fixedBonus.spirit > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">精神</span>
-                               <span className="text-cyan-300 font-medium">+{Number(extra.fixedBonus.spirit).toLocaleString()}</span>
+                               <span className="text-cyan-300 font-medium">+{formatNumber(Number(extra.fixedBonus.spirit))}</span>
                              </div>
                            )}
                            {extra.fixedBonus?.hp !== undefined && extra.fixedBonus.hp > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">气血</span>
-                               <span className="text-pink-400 font-medium">+{Number(extra.fixedBonus.hp).toLocaleString()}</span>
+                               <span className="text-pink-400 font-medium">+{formatNumber(Number(extra.fixedBonus.hp))}</span>
                              </div>
                            )}
                            {extra.fixedBonus?.allAttr !== undefined && extra.fixedBonus.allAttr > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">全属性</span>
-                               <span className="text-amber-300 font-medium">+{Number(extra.fixedBonus.allAttr).toLocaleString()}</span>
+                               <span className="text-amber-300 font-medium">+{formatNumber(Number(extra.fixedBonus.allAttr))}</span>
                              </div>
                            )}
                            {extra.cultivationBonus && extra.cultivationBonus > 0 && (
                              <div className="flex justify-between text-xs">
                                <span className="text-muted-foreground">修炼方向属性</span>
-                               <span className="text-purple-300 font-medium">+{Number(extra.cultivationBonus).toLocaleString()}</span>
+                               <span className="text-purple-300 font-medium">+{formatNumber(Number(extra.cultivationBonus))}</span>
                              </div>
                            )}
                            {extra.specialEffect === 'evolve-ice' && (
