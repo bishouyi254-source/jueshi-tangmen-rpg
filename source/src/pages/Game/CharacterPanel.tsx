@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sword, Shield, Zap, Brain, Heart, Sparkles, Flame, Target, Droplets, X, Coins, CircleDot, Battery, Swords, Leaf, Crown, Paintbrush, Edit3, RotateCcw } from 'lucide-react';
 import { useGame, calcAttributes, getRealmDisplay, QUALITY_COLOR, QUALITY_LABEL, RING_COLOR_MAP, RING_DISPLAY_COLOR, RING_LABEL, getRequiredLevelForRing, getMaxRings, type ISoulBoneSlots, type ISoulRing, getExtremeInfo, getStaminaMax, calcRecoveredStamina, inferElementFromName, calcAttributeBonus, calcSpiritBonusBreakdown, formatSkillDamagePct, calcReincarnationBonusBreakdown } from '@/lib/gameStore';
+import ArmorContribution from './ArmorContribution';
 import DivineRingAvatar from '@/components/DivineRingAvatar';
 import { formatNumber, formatCombatPower } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -708,7 +709,7 @@ export default function CharacterPanel() {
           })}
         </div>
 
-        {/* 魂灵上阵加成 */}
+        <ArmorContribution player={player} attributes={attrs}/>{/* 魂灵上阵加成 */}
          {activeSpirits.length > 0 && spiritBonus && (
            <div className="mt-3 pt-3 border-t border-cyan-500/20">
              <div className="flex items-center justify-between mb-2">

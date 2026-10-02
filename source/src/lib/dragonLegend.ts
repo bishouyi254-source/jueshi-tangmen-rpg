@@ -16,6 +16,21 @@ export function dragonProgress(p:any):DragonProgress {
   return {version:1,lingli:n(d.lingli),forgeExp:n(d.forgeExp),ore:n(d.ore),thousand:n(d.thousand),spiritual:n(d.spiritual),parts:ARMOR_PARTS.map((_,i)=>Math.min(2,n(d.parts?.[i]))),equipped:d.equipped===true,style:['attack','defense','control','support'].includes(d.style)?d.style:'attack',name:typeof d.name==='string'?d.name.slice(0,2):'',trial:d.trial&&typeof d.trial.id==='string'&&TRIALS[d.trial.tier]?{...d.trial,claimed:!!d.trial.claimed}:null};
 }
 export function armorTier(p:any){return Math.min(...dragonProgress(p).parts);}
+export function armorCraftRequirements(p:any,i:number){
+  const d=dragonProgress(p),next=(d.parts[i]||0)+1,key=next===1?'thousand':'spiritual';
+  const level=next===1?50:60,rings=next===1?5:6,coins=next===1?3000:10000;
+  return {next,key,level,rings,coins,material:next===1?'千锻沉银':'灵锻沉银',owned:d[key],
+    missingMaterial:Math.max(0,2-d[key]),missingCoins:Math.max(0,coins-(p.soulCoins||0)),
+    missingLevel:Math.max(0,level-p.level),missingRings:Math.max(0,rings-(p.soulRings||[]).length),
+    ready:next<=2&&p.level>=level&&(p.soulRings||[]).length>=rings&&d[key]>=2&&(p.soulCoins||0)>=coins};
+}
+export function armorBonusBreakdown(p:any){
+  const d=dragonProgress(p),parts=d.parts.reduce((a,b)=>a+b,0)*.003,tier=armorTier(p);
+  const directionKey=({attack:'attack',defense:'defense',control:'spirit',support:'hp'})[d.style];
+  const attr=String(p.martialSoul?.element||p.martialSoul?.extremeAttribute||'');
+  const resonanceKey=/精神|光|暗/.test(attr)?'spirit':/风/.test(attr)?'speed':/土|水|冰/.test(attr)?'defense':/木|生命/.test(attr)?'hp':'attack';
+  return {parts,directionKey,direction:tier*.05,resonanceKey,resonance:tier===2?.03:0};
+}
 export function spiritEvolution(s:any){return Math.min(5,Math.max(0,Math.floor(Number(s?.evolutionStage)||0)));}
 export function evolutionMultiplier(s:any){return 1+spiritEvolution(s)*.1;}
 export function armorBonuses(p:any){
