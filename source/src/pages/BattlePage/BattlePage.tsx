@@ -1,3 +1,4 @@
+import { recordLiehunHit, type LiehunLedger } from '@/lib/liehunGrowth';
 import {readArmorDomain,startArmorDomain,finishArmorDomainAction,armorDomainMultiplier,ARMOR_DOMAIN_NAMES,ARMOR_DOMAIN_EFFECTS} from '@/lib/armorDomain';
 import {dragonAction,dragonProgress,armorTier} from '@/lib/dragonLegend';
 import {__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus} from '@/lib/fierceEffects';
@@ -131,6 +132,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
         checkAndStoreFavorTrigger,
         challengeCompanionWin,
         claimShadowVictory,
+        settleLiehunVictory,
         challengeCompanionLose,
         devourBeast,
         recordTeaDefeat,
@@ -598,6 +600,19 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   const phaseRef = useRef(phase);
   const logsRef = useRef(logs);
   const rewardsRef = useRef(rewards);
+  const liehunRef = useRef<LiehunLedger | undefined>(battleState?.meta?.liehunGrowth);
+  function recordDirectDamage(lost: number, attacker: string) {
+    const next=recordLiehunHit(liehunRef.current,lost,attacker);if(!next)return;
+    // 气血与伤害账本同步保存；魂灵扣血也必须保存，避免刷新后重复扣同一段气血。
+    const hp=enemyHpRef.current;
+    liehunRef.current=next;setBattleState(prev=>prev?.meta?.liehunGrowth?.id===next.id?{...prev,enemy:{...prev.enemy,hp},meta:{...prev.meta,liehunGrowth:next}}:prev);
+  }
+  function settleDirectGrowth() {
+    const ledger=liehunRef.current;if(!ledger)return;
+    settleLiehunVictory(ledger,'victory');
+    if(!ledger.settled){liehunRef.current={...ledger,settled:true};setBattleState(prev=>prev?{...prev,meta:{...prev.meta,liehunGrowth:liehunRef.current}}:prev);}
+  }
+  useEffect(()=>{if(phase==='victory' && battleInitRef.current)settleDirectGrowth();},[phase,battleState?.meta?.liehunGrowth?.id]);
   useEffect(() => { enemyHpRef.current = enemyHp; }, [enemyHp]);
   useEffect(() => { enemyMaxHpRef.current = enemyMaxHp; }, [enemyMaxHp]);
   useEffect(() => { playerHpRef.current = playerHp; }, [playerHp]);
@@ -614,7 +629,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     try {
       setBattleState(prev=>prev&&prev.enemy?.id===battleState.enemy.id?{
         ...prev,
-        meta:{...prev.meta,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
+        meta:{...prev.meta,liehunGrowth:liehunRef.current,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
         enemy: {
           ...battleState.enemy,
           hp: enemyHpRef.current,
@@ -936,7 +951,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
        playerSoulPower: currentSoulPower,
        updatedAt: now,
        exploreSource: battleState?.exploreSource,
-       meta: {...prev?.meta,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
+       meta: {...prev?.meta,liehunGrowth:liehunRef.current,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
      }:prev);
    }, [phase, enemyHp, enemyMaxHp, rewards, enemy, battleType, locationId, setBattleState, playerHp, currentSoulPower]);
 
@@ -1172,11 +1187,12 @@ function setPlayerHp(value) {
 function setCurrentSoulPower(value) {const next=typeof value==='function'?value(soulPowerRef.current):value;soulPowerRef.current=next;__fbRawMana(next);}
 function __fbHitEnemy(damage,attacker='player',instant=false) {
   const s=__fbGet();
-  if(!s){setEnemyHp(hp=>Math.max(0,hp-damage));return Math.min(enemyHpRef.current,damage);}
+  if(!s){const lost=Math.min(Math.max(0,enemyHpRef.current),Math.max(0,damage));enemyHpRef.current-=lost;setEnemyHp(enemyHpRef.current);recordDirectDamage(lost,attacker);return lost;}
   const adjusted=instant?damage:Math.round(damage*(Math.max(0,enemy.defense)+500)/(__fbDefense(s,'enemy',enemy.defense)+500));
   const hit=__fbDirect(s,'enemy',adjusted,{attacker,direct:true});
   __fbCommit(hit.next,hit.logs);
   if(hit.absorbed>0)addLog(`🛡️ ${enemy.name} 护盾吸收 ${hit.absorbed} 点伤害。`,'system');
+  recordDirectDamage(hit.lost,attacker);
   return hit.lost;
 }
 function __fbSilenced() {
@@ -2109,6 +2125,7 @@ function __fbRestoreSpirits(spirits,saved) {
      // 🔴 关键：只允许胜利判定一次，防止重复触发弹窗/重复掉落
      if (battleEndedRef.current) return;
      battleEndedRef.current = true;
+     settleDirectGrowth();
      // 清理所有可能还在调度的敌方回合定时器，防止回流
       clearEnemyTimer();
       // 清理魂灵攻击定时器，防止胜利后继续出手
@@ -3448,6 +3465,7 @@ function __fbRestoreSpirits(spirits,saved) {
                       击败了 <span className="text-cyan-300 font-semibold">{rewards.beastName}</span>
                     </div>
                   )}
+                  {liehunRef.current?.eligible && <div className="rounded-xl border border-purple-500/25 bg-card/60 p-3 text-xs" data-liehun-reward>碎念汲取：玩家直接伤害 {formatNumber(liehunRef.current.damage)}，永久精神力 +{formatNumber(Math.floor(liehunRef.current.damage/1e16))}</div>}
                   {(rewards.exp > 0 || rewards.coins > 0) && (
                     <div className="flex items-center justify-center gap-4 text-sm mb-3">
                       {rewards.exp > 0 && (

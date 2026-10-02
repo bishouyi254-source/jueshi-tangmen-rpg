@@ -21,6 +21,7 @@ export interface IMartialSoul {
   }
   /** 9个魂技（第一魂技…第九魂技），按系别+武魂名自动生成 */
   soulSkills: string[]
+  customSoulSkills?: string[]
 }
 
 // === 魂技生成 v12.0：按属性 + 系别 + 器/兽武魂 三维度生成 ===
@@ -85,6 +86,7 @@ export function getSoulDepartment(type: string): string {
 }
 
 export function generateSoulSkills(soul: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'>): string[] {
+  if(soul.customSoulSkills?.length===9)return [...soul.customSoulSkills];
   const customSkills={"曜金龙戟":["第1魂技·龙锋刺","第2魂技·曜金破阵","第3魂技·龙鳞斩","第4魂技·金戟裂空","第5魂技·百刃归锋","第6魂技·龙吟贯日","武魂真身","第8魂技·万锋镇天","第9魂技·曜金龙皇破"],"霜魄灵瞳":["第1魂技·霜瞳凝念","第2魂技·灵魄束缚","第3魂技·镜雪迷阵","第4魂技·寒念冲击","第5魂技·碎魄凝光","第6魂技·霜心灵域","武魂真身","第8魂技·万念归寂","第9魂技·霜魄神识之剑"],"虚空天隼":["第1魂技·隼影突袭","第2魂技·裂空双翼","第3魂技·虚空掠爪","第4魂技·流隙疾冲","第5魂技·千影锋羽","第6魂技·天隼空痕","武魂真身","第8魂技·万羽破界","第9魂技·虚空天隼神化"],"镇岳玄龟":["第1魂技·玄甲壁","第2魂技·镇岳盾","第3魂技·磐山墙","第4魂技·厚土玄甲","第5魂技·山岳屏障","第6魂技·玄龟圣盾","武魂真身","第8魂技·镇岳金身","第9魂技·万古玄龟盾"],"星露琉璃莲":["第1魂技·星露光矢","第2魂技·琉璃祝福","第3魂技·莲华冲击","第4魂技·星露庇护","第5魂技·青莲审判","第6魂技·琉璃神恩","武魂真身","第8魂技·星露绽放","第9魂技·琉璃莲华神罚"]}[soul.name];if(customSkills)return [...customSkills];
   const element = (soul.element && soul.element !== '无属性') ? soul.element : getSoulElement(soul.name)
   const dept = getSoulDepartment(soul.type)
@@ -204,6 +206,24 @@ const supremeDivineSouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationA
     extremeAttribute: '极致之暗',
     element: '暗属性',
     baseStats: { attack: 115, defense: 75, speed: 90, spirit: 110, hp: 130 },
+  },
+  {
+    name: '裂魂神戟', quality: 'supremeDivine', type: '器武魂·强攻系',
+    description: '由破碎神魂凝聚而成的至高神级长戟，戟身流转银白神念光纹，既是兵刃，又可直接斩碎意识。极致之暗蕴含神念之力，特殊天赋【碎念汲取】：精神力×3转化为额外攻击力。胜利后每1京玩家直接攻击实际扣血增加1点永久精神力；魂灵、反伤、持续伤害、升灵台与轮回之影不计入，转世重置。',
+    extremeAttribute: '极致之暗',
+    element: '暗属性',
+    baseStats: { attack: 115, defense: 72, speed: 88, spirit: 175, hp: 115 },
+    customSoulSkills: [
+      '第1魂技·念刺斩',
+      '第2魂技·神念突刺',
+      '第3魂技·裂魂震荡',
+      '第4魂技·千念绞杀',
+      '第5魂技·识海穿刺',
+      '第6魂技·寂念领域',
+      '武魂真身·裂魂神戟',
+      '第8魂技·万魂崩灭',
+      '第9魂技·神魂一斩',
+    ],
   },
 ]
 

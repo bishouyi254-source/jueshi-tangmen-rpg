@@ -1,3 +1,6 @@
+import SweepSettings from './SweepSettings';
+import { formatNumber } from '@/lib/utils';
+import type { SweepFilterSummary } from '@/lib/sweepFilter';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, MapPin, Search, Swords, SkipForward, Lock, Zap, AlertTriangle, Trophy, Star, Coins, Crown, GraduationCap, Shield, Users, ChevronRight, UserCog, Sparkles, BookOpen, Snowflake, Ghost, Flower2, Leaf, Gift, Sparkles as SparklesIcon, X } from 'lucide-react';
@@ -488,6 +491,7 @@ export default function MapPanel() {
     coins: number;
     exp: number;
     beasts: any[];
+    filterSummary?: SweepFilterSummary;
   } | null>(null);
 
   const favorBeast = pendingFavorBeastId
@@ -1105,6 +1109,7 @@ export default function MapPanel() {
       coins: result.result.coins,
       exp: result.result.exp,
       beasts: result.result.beasts,
+      filterSummary: result.result.filterSummary,
     });
     toast.success(`扫荡完成！获得 ${result.result.rings.length} 个魂环，${result.result.items.length} 件物品`);
   };
@@ -1143,6 +1148,7 @@ export default function MapPanel() {
       coins: result.result.coins,
       exp: result.result.exp,
       beasts: result.result.beasts,
+      filterSummary: result.result.filterSummary,
     });
     toast.success(`扫荡完成！获得 ${result.result.rings.length} 个魂环，${result.result.items.length} 件物品`);
   };
@@ -1181,6 +1187,7 @@ export default function MapPanel() {
       coins: result.result.coins,
       exp: result.result.exp,
       beasts: result.result.beasts,
+      filterSummary: result.result.filterSummary,
     });
     toast.success(`扫荡完成！获得 ${result.result.items.length} 件物品`);
   };
@@ -2252,6 +2259,7 @@ export default function MapPanel() {
     const dungeons = FOREST_DUNGEONS[currentZone.id] || [];
     return (
       <div className="space-y-4">
+        <SweepSettings />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView('starForestZone')}
@@ -2462,6 +2470,7 @@ export default function MapPanel() {
 
     return (
       <div className="space-y-4">
+        <SweepSettings />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView('sun-mountains')}
@@ -4043,6 +4052,7 @@ export default function MapPanel() {
     const dungeons = BEIJI_DUNGEONS[currentBeijiZone.id] || [];
     return (
       <div className="space-y-4">
+        <SweepSettings />
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView('beijiZone')}
@@ -5298,7 +5308,7 @@ export default function MapPanel() {
                     </h3>
                     <SparklesIcon className="h-5 w-5 text-amber-400" />
                   </div>
-                  <div className="text-[11px] text-amber-300/70">6 节点一键完成，所有掉落已收入囊中</div>
+                  <div className="text-[11px] text-amber-300/70">6 节点一键完成，掉落按筛选设置处理</div>
                 </div>
                 <button
                   onClick={() => setSweepResult(null)}
@@ -5322,6 +5332,11 @@ export default function MapPanel() {
                   </div>
                 </div>
 
+                {sweepResult.filterSummary && <div className="rounded-xl bg-card/60 border border-cyan-500/25 p-3 text-xs space-y-1" data-sweep-summary>
+                  <div>魂环保留 {sweepResult.filterSummary.keptRings} 个 · 销毁 {sweepResult.filterSummary.destroyedRings} 个</div>
+                  <div>魂骨保留 {sweepResult.filterSummary.keptBones} 件 · 出售 {sweepResult.filterSummary.soldBones} 件</div>
+                  <div className="text-amber-300">出售所得 +{formatNumber(sweepResult.filterSummary.soldCoins)} 魂币（已计入总收益）</div>
+                </div>}
                 {/* 魂环列表 */}
                 {sweepResult.rings.length > 0 && (
                   <div className="space-y-2">

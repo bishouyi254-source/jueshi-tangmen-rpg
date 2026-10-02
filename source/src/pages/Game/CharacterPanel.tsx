@@ -1,3 +1,4 @@
+import { hasLiehun, readNianBonus } from '@/lib/liehunGrowth';
 import { useState, useMemo, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sword, Shield, Zap, Brain, Heart, Sparkles, Flame, Target, Droplets, X, Coins, CircleDot, Battery, Swords, Leaf, Crown, Paintbrush, Edit3, RotateCcw } from 'lucide-react';
@@ -798,6 +799,12 @@ export default function CharacterPanel() {
            </div>
          )}
 
+          {hasLiehun(player) && <div className="mt-3 pt-3 border-t border-purple-500/20 text-xs space-y-1" data-liehun-panel>
+            <h4 className="font-semibold text-purple-300">裂魂神戟 · 碎念汲取</h4>
+            <div>本世永久精神力 +{formatNumber(readNianBonus(player.nianBonus).totalSpirit)}</div>
+            <div>精神转攻击 +{formatNumber(attrs.spirit * 3)} · 已结算 {readNianBonus(player.nianBonus).count} 场</div>
+            <p className="text-muted-foreground">胜利后每1京玩家直接扣血增长1点精神；升灵台与轮回之影不计入，转世重置。</p>
+          </div>}
           {/* 🔴 混沌无极武魂·吞噬天赋面板 */}
            {(player.martialSoul.name === '混沌无极' || (player.isTwinSoul && player.secondSoul?.name === '混沌无极')) && player.devour && player.devour.count > 0 && (
              <div className="mt-3 pt-3 border-t border-purple-500/20">

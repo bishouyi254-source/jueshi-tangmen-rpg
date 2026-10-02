@@ -1,3 +1,5 @@
+import { hasLiehun, readNianBonus, createLiehunLedger, settleLiehunGrowth, type LiehunLedger, type NianBonus } from '@/lib/liehunGrowth';
+import { filterSweepDrops, normalizeSweepYears, type SweepFilterSummary } from '@/lib/sweepFilter';
 import { hasDefeatedHundun, reconcileGodUnlock } from '@/lib/godUnlock';
 import {dragonAction,dragonProgress,armorBonuses,evolutionMultiplier,reincarnateDragon} from '@/lib/dragonLegend';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react';
@@ -779,6 +781,9 @@ export interface IPlayer {
   liangyiFirstBonusGiven?: boolean;
   /** 本世击败混沌茶；独立于可移除的伴侣记录。 */
   hundunChaDefeated?: boolean;
+  nianBonus?: NianBonus;
+  sweepAutoDestroyRingYears?: number;
+  sweepAutoSellBoneYears?: number;
    /** 一键扫荡探索次数记录：key 为区域标识（如 star-outer / beiji-inner / million-year），value 为累计进入次数 */
    sweepExploreCounts?: Record<string, number>;
    /** 每日轮回之影挑战是否已使用：日期字符串 'YYYY-MM-DD' */
@@ -1638,6 +1643,7 @@ export function calcAttributes(player: IPlayer): IAttrs {
   let defense = base.defense * powerMultiplier + player.level * lvlGrowth.defense * growthMul;
   let speed = base.speed * powerMultiplier + player.level * lvlGrowth.speed * growthMul;
   let spirit = base.spirit * spiritPowerBonus + player.level * lvlGrowth.spirit * growthMul;
+  if(hasLiehun(player))spirit+=readNianBonus(player.nianBonus).totalSpirit;
   let hp = base.hp * powerMultiplier + player.level * lvlGrowth.hp * growthMul;
 
   // 转世轮回：每世增加觉醒武魂基础属性50%（可叠加，基于基础属性部分）
@@ -2285,6 +2291,8 @@ export function calcAttributes(player: IPlayer): IAttrs {
 
     const armorBonus=armorBonuses(player);
     attack*=1+armorBonus.attack;defense*=1+armorBonus.defense;speed*=1+armorBonus.speed;spirit*=1+armorBonus.spirit;hp*=1+armorBonus.hp;
+    // 取最终常驻精神，转换一次；不重新进入属性倍率计算。
+    if(hasLiehun(player))attack += Math.round(spirit) * 3;
     // === 状态信息收集（供UI展示，解释战力波动原因）===
     const weaknessUntil = player.companions?.weaknessUntil ?? 0;
     const isWeak = weaknessUntil > Date.now();
@@ -3869,6 +3877,8 @@ interface GameContextValue {
     teaNodeCooldowns: Record<string, number>;
     /** 探索茶城节点，有概率遇到人物 */
     exploreTeaNode: (nodeId: string) => { success: boolean; reason?: string; encounterId?: string; expGained?: number; coinGained?: number };
+    setSweepFilters: (ringYears: number, boneYears: number) => void;
+    settleLiehunVictory: (ledger: LiehunLedger, phase: string) => void;
     /** 一键扫荡：模拟多个节点探索，返回所有掉落 */
     sweepExplore: (areaKey: string, params: {
       yearMin: number;
@@ -3888,6 +3898,7 @@ interface GameContextValue {
         items: any[];
         coins: number;
         exp: number;
+        filterSummary: SweepFilterSummary;
       };
     };
     /** 读取某区域的累计探索次数（用于扫荡解锁判断） */
@@ -4713,6 +4724,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         };
         if (data.martialSoul?.name && nameRenameMap[data.martialSoul.name]) data.martialSoul.name = nameRenameMap[data.martialSoul.name];
         if (data.secondSoul?.name && nameRenameMap[data.secondSoul.name]) data.secondSoul.name = nameRenameMap[data.secondSoul.name];
+        data.nianBonus = readNianBonus(data.nianBonus);
+        data.sweepAutoDestroyRingYears = normalizeSweepYears(data.sweepAutoDestroyRingYears);
+        data.sweepAutoSellBoneYears = normalizeSweepYears(data.sweepAutoSellBoneYears);
         data = reconcileGodUnlock(data);
         data.dragonLegend=dragonProgress(data);
         for(const soul of [data.martialSoul,data.secondSoul]) {if(soul?.name==='吞噬茶')soul.name='混沌无极';}
@@ -9020,6 +9034,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
      });
    };
 
+   const setSweepFilters = (ringYears: number, boneYears: number) => { setPlayer(p=>p?{...p,sweepAutoDestroyRingYears:normalizeSweepYears(ringYears),sweepAutoSellBoneYears:normalizeSweepYears(boneYears)}:p); };
+   const settleLiehunVictory = useCallback((ledger: LiehunLedger, phase: string) => {setPlayer(p=>p?settleLiehunGrowth(p,ledger,phase):p);},[]);
    const sweepExplore = (
      areaKey: string,
      params: {
@@ -9045,8 +9061,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
      }
 
      const beasts: any[] = [];
-     const rings: any[] = [];
-     const items: any[] = [];
+     let rings: any[] = [];
+     let items: any[] = [];
      let totalCoins = 0;
      let totalExp = 0;
      const now = Date.now();
@@ -9105,6 +9121,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
        totalExp += expGain;
      }
 
+     const filtered = filterSweepDrops(rings,items,player.sweepAutoDestroyRingYears,player.sweepAutoSellBoneYears);
+     rings=filtered.rings;items=filtered.items;totalCoins+=filtered.summary.soldCoins;
      // 应用：扣体力 + 加金币 + 加经验 + 魂环进入待吸收 + 物品入背包 + 增加探索次数
      setPlayer((p) => {
        if (!p) return p;
@@ -9117,7 +9135,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
          stamina: nextStamina,
          staminaUpdatedAt: now,
          soulCoins: p.soulCoins + totalCoins,
-         pendingSoulRings: [...p.pendingSoulRings, ...rings].slice(-20),
+         pendingSoulRings: [...p.pendingSoulRings, ...rings],
         sweepExploreCounts: {
           ...(p.sweepExploreCounts || {}),
           [areaKey]: prevCount + 1,
@@ -9146,6 +9164,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
          items,
          coins: totalCoins,
          exp: totalExp,
+         filterSummary: filtered.summary,
        },
      };
    };
@@ -11117,7 +11136,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       logs: [],
       updatedAt: Date.now(),
       exploreSource: config.exploreSource,
-      meta: config.meta as Record<string, any> | undefined,
+      meta: { ...config.meta, liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()) },
     });
     setInBattle(true);
   };
@@ -11693,7 +11712,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         unlockGodLevelCultivation, canUnlockGodLevel, chooseLawFragment, fuseLaw,
         godBreakthrough, isGodBottleneck, getFusedLawsCount, getGodLevelCap,
        // 一键扫荡
-       sweepExplore, getSweepCount, incrementSweepCount,
+       setSweepFilters, settleLiehunVictory, sweepExplore, getSweepCount, incrementSweepCount,
        // 轮回之影
        getReincarnationShadow, hasShadowChallengedToday, startShadowChallenge, claimShadowVictory,
       // 成就系统
@@ -11704,7 +11723,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }), [player, attributes, hasSave, loading, exploration, battleState, lastBattleResult, inBattle, clearNewAchievements, unlockedAchievementIds, getAchievementProgress, sweepExplore, getSweepCount, incrementSweepCount, getReincarnationShadow, hasShadowChallengedToday, startShadowChallenge, claimShadowVictory]);
 
   const localBattleLoaded=useRef(false);
-  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&x.battle.enemy?.hp>0){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension||(battleState?.meta as any)?.armorDomain?.used))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
+  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&(x.battle.enemy?.hp>0 || x.battle.phase==='victory')){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension||(battleState?.meta as any)?.armorDomain?.used||(battleState?.meta as any)?.liehunGrowth))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
@@ -11832,6 +11851,7 @@ export function useGame(): GameContextValue {
        pendingTeaFavorId: null,
        teaNodeCooldowns: {},
        exploreTeaNode: () => ({ success: false, reason: '未初始化' }),
+       setSweepFilters: () => {}, settleLiehunVictory: () => {},
        sweepExplore: () => ({ success: false, reason: '未初始化' }),
        getSweepCount: () => 0,
        incrementSweepCount: () => {},
