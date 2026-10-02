@@ -5,10 +5,12 @@ import {ARMOR_DOMAIN_NAMES,ARMOR_DOMAIN_EFFECTS} from '@/lib/armorDomain';
 import {toast} from 'sonner';
 import ArmorSetProgress from './ArmorSetProgress';
 import ArmorFigure from './ArmorFigure';
+import AscensionTower from './AscensionTower';
 export default function DragonLegendPanel({mode}:{mode:'ascension'|'forge'}){
  const {player,attributes,setPlayer,inBattle,setBattleState,setInBattle}=useGame();
  const [selected,setSelected]=useState(''),[name,setName]=useState(''),[style,setStyle]=useState('attack');const [view,setView]=useState('main');const gate=useRef(false);
  useEffect(()=>setView('main'),[mode]);
+ useEffect(()=>{if(!inBattle)gate.current=false;},[inBattle]);
  useEffect(()=>{const d=dragonProgress(player);setName(d.name);setStyle(d.style);},[player?.dragonLegend?.name,player?.dragonLegend?.style]);
  if(!player||!attributes)return null;const d=dragonProgress(player),tier=armorTier(player),spirit=player.soulSpirits?.find(s=>s.spiritId===(selected||player.soulSpirits?.[0]?.spiritId)),stage=spiritEvolution(spirit),target=EVOLUTIONS[stage];
  function act(a:any){if(inBattle)return toast.error('战斗中不能操作');const now=Date.now(),preview=dragonAction(player,a,now);if(preview.reason)return toast.error(preview.reason);setPlayer(p=>dragonAction(p,a,now).player);toast.success(preview.message);}
@@ -21,7 +23,7 @@ export default function DragonLegendPanel({mode}:{mode:'ascension'|'forge'}){
  {mode==='ascension'?<>
  {view!=='evolve'?<>
  {d.trial&&!d.trial.claimed&&<div className="dragon-warning">存在未结束的试炼<button className="dragon-quiet" onClick={()=>act({type:'leave',id:d.trial.id})}>放弃未结束的试炼</button></div>}
- <div className="dragon-grid trials">{TRIALS.map((t,i)=>{const locked=player.level<t.level||!spirit;return <div key={t.name} className="dragon-card"><div className="dragon-card-head"><div className={'dragon-emblem rank-'+i}>升</div><div><h3>{t.name}</h3><span className="dragon-muted">{t.level}级解锁</span></div><span className={'dragon-badge '+(locked?'locked':'')}>{locked?'未解锁':'可挑战'}</span></div><div className="dragon-reward"><span className="dragon-muted">胜利奖励</span><strong>+{fmt(t.reward)} <small>灵力</small></strong></div><div className="dragon-cost"><span>体力 <b>{t.stamina}</b></span><span>魂币 <b>{fmt(t.coins)}</b></span></div><button className="dragon-primary" disabled={locked} onClick={()=>enter(i)}>挑战{t.name}</button></div>})}</div>
+ <AscensionTower player={player} hasSpirit={!!spirit} inBattle={inBattle} onEnter={enter}/>
  <p className="dragon-hint">选择试炼获取灵力，再前往“魂灵进化”培养已契约魂灵。</p>
  </>:<div className="dragon-card"><div className="dragon-section-title"><span>魂灵进化</span><span className="dragon-muted">灵力 {fmt(d.lingli)}</span></div><label className="dragon-field">培养魂灵<select aria-label="培养魂灵" value={spirit?.spiritId||''} onChange={e=>setSelected(e.target.value)}><option value="">选择已契约魂灵</option>{player.soulSpirits?.map(s=><option key={s.spiritId} value={s.spiritId}>{s.name}</option>)}</select></label>
  {spirit?<><div className="dragon-spirit"><div className="dragon-emblem">{spirit.iconChar||'灵'}</div><div><h3>{spirit.name}</h3><p className="dragon-muted">{spirit.attribute} · {stage?EVOLUTIONS[stage-1].name:'未升灵'}</p></div><strong className="dragon-green">+{stage*10}%</strong></div><div className="dragon-stages">{EVOLUTIONS.map((e,i)=><span key={e.name} className={i<stage?'reached':''}>{e.name}</span>)}</div><div className="dragon-row"><span>下一阶段</span><b>{target?target.name:'已达上限'}</b></div><div className="dragon-row"><span>所需灵力</span><b className={target&&d.lingli<target.cost?'dragon-red':'dragon-gold'}>{target?fmt(target.cost):'—'}</b></div><button className="dragon-primary" disabled={!target||d.lingli<(target?.cost||0)} onClick={()=>act({type:'evolve',id:spirit.spiritId})}>{target?'进化为'+target.name+' · '+fmt(target.cost)+'灵力':'已达百万年上限'}</button><p className="dragon-hint">提升魂灵自身战斗属性与上阵贡献，保留属性和境界。</p></>:<div className="dragon-empty">尚未契约普通魂灵<p>前往传灵塔获取契约机会</p></div>}</div>}
