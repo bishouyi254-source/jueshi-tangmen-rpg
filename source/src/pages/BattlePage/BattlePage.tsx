@@ -1,3 +1,4 @@
+import {readArmorDomain,startArmorDomain,finishArmorDomainAction,armorDomainMultiplier,ARMOR_DOMAIN_NAMES,ARMOR_DOMAIN_EFFECTS} from '@/lib/armorDomain';
 import {dragonAction,dragonProgress,armorTier} from '@/lib/dragonLegend';
 import {__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus} from '@/lib/fierceEffects';
 import {__localShadowAction} from '@/lib/shadow';
@@ -174,8 +175,8 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
 
   // 安全调度敌方回合（先清旧的再设新的，保证不会并发两个调度）
   // 流程：玩家行动 → 魂灵出手 → 敌人行动
-  const scheduleEnemyAction = (delay: number) => {
-    __fbFinishPlayer();clearEnemyTimer();
+  const scheduleEnemyAction = (delay: number, completePlayerAction=true) => {
+    __fbFinishPlayer();if(completePlayerAction)__armorFinishAction();clearEnemyTimer();
     if(battleEndedRef.current||enemyHpRef.current<=0||playerHpRef.current<=0)return;
     if(__fbGet()?.enemyActed){enemyTurnTimerRef.current=window.setTimeout(()=>__fbEnterPlayer(),getAnimDelay(600));return;}
     enemyTurnTimerRef.current = window.setTimeout(async () => {
@@ -196,7 +197,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     }, getAnimDelay(delay));
   };
 
-  const [phase, setPhase] = useState<BattlePhase>('playerTurn');
+  const [phase, setPhase] = useState<BattlePhase>((battleState?.phase==='intro'?'playerTurn':battleState?.phase||'playerTurn') as BattlePhase);
   // 胜利阶段细分：'ring-select' 选择魂环 → 'summary' 结算展示
    const [victoryStep, setVictoryStep] = useState<'ring-select' | 'spirit-select' | 'summary'>('ring-select');
    // 🔴 吞噬茶武魂·吞噬弹窗（魂环收取/销毁后弹出）
@@ -230,8 +231,8 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
      open: boolean;
      phase: 'confirm' | 'story' | 'done';
    }>({ open: false, phase: 'confirm' });
-  const [enemyHp, setEnemyHp] = useState(100);
-  const [enemyMaxHp, setEnemyMaxHp] = useState(100);
+  const [enemyHp, setEnemyHp] = useState(battleState?.enemy?.hp ?? 100);
+  const [enemyMaxHp, setEnemyMaxHp] = useState(battleState?.enemy?.maxHp ?? 100);
   const [logs, setLogs] = useState<LogEntry[]>([]);
    const [rewards, setRewards] = useState<{
      exp: number;
@@ -372,8 +373,8 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
 
   // 战斗内当前血量/魂力（本地 state，战斗结束回写）
   // ⚠️ attrs 在 player 未加载完成时为 null，用 0 兜底防崩溃
-  const [playerHp, __fbRawPlayerHp] = useState(attrs?.hp ?? 0);
-  const [currentSoulPower, __fbRawMana] = useState(attrs?.maxSoulPower ?? 0);
+  const [playerHp, __fbRawPlayerHp] = useState(battleState?.playerHp ?? attrs?.hp ?? 0);
+  const [currentSoulPower, __fbRawMana] = useState(battleState?.playerSoulPower ?? attrs?.maxSoulPower ?? 0);
   // 双生武魂魂技显示切换（0=第一武魂，1=第二武魂）
   const [activeSoulSkillTab, setActiveSoulSkillTab] = useState(0);
 
@@ -401,6 +402,12 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   }, [activeTrueBodyIndex, playerSecondSoul, playerMartialSoul]);
   // 领域状态：是否开启（开启期间有额外加成+保护罩+魂力消耗2倍）
   const [domainActive, setDomainActive] = useState(false);
+  const armorDomainRef=useRef(readArmorDomain(battleState?.meta?.armorDomain));
+  const armorDomainEnemyRef=useRef(battleState?.enemy?.id);
+  if(armorDomainEnemyRef.current!==battleState?.enemy?.id){armorDomainEnemyRef.current=battleState?.enemy?.id;armorDomainRef.current=readArmorDomain(battleState?.meta?.armorDomain);}
+  function __armorCommit(next){armorDomainRef.current=next;setBattleState(prev=>prev&&prev.enemy?.id===enemy.id?({...prev,meta:{...prev.meta,armorDomain:next}}):prev);}
+  function __armorFinishAction(){const old=armorDomainRef.current;if(!old.turns)return;const r=finishArmorDomainAction(old,playerHpRef.current,attrs.hp,enemyHpRef.current);__armorCommit(r.state);if(r.heal>0){setPlayerHp(v=>Math.min(attrs.hp,v+r.heal));addLog('斗铠领域·生息：恢复 '+formatNumber(r.heal)+' 气血。','heal');}if(old.turns&&!r.state.turns)addLog('斗铠领域已结束。','system');}
+  useEffect(()=>{if(['victory','defeat','flee'].includes(phase)&&armorDomainRef.current.turns)__armorCommit({...armorDomainRef.current,turns:0,skipTick:false});},[phase]);
   // 第二领域（双生武魂）
   const [secondDomainActive, setSecondDomainActive] = useState(false);
   // 领域开启动画显示中
@@ -462,7 +469,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   // 领域加成后的攻击/防御/速度/精神/暴击/爆伤/魂技伤害倍率
   const domainEff = useMemo(() => {
     if (!domainBonus) {
-      return { atkMul: 1, defMul: 1, spdMul: 1, spiMul: 1, hpMul: 1, critAdd: 0, critDmgAdd: 0, skillDmgAdd: 0 };
+      return { atkMul: 1, defMul: 1, spdMul: armorDomainMultiplier(armorDomainRef.current,'speed'), spiMul: 1, hpMul: 1, critAdd: 0, critDmgAdd: 0, skillDmgAdd: 0 };
     }
     let atk = 1, def = 1, spd = 1, spi = 1, hp = 1;
     if (domainBonus.allAttr) { atk *= 1 + domainBonus.allAttr; def *= 1 + domainBonus.allAttr; spd *= 1 + domainBonus.allAttr; spi *= 1 + domainBonus.allAttr; hp *= 1 + domainBonus.allAttr; }
@@ -474,14 +481,14 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     return {
       atkMul: atk,
       defMul: def,
-      spdMul: spd,
+      spdMul: spd*armorDomainMultiplier(armorDomainRef.current,'speed'),
       spiMul: spi,
       hpMul: hp,
       critAdd: domainBonus.critRate || 0,
       critDmgAdd: domainBonus.critDmg || 0,
       skillDmgAdd: domainBonus.skillDmg || 0,
     };
-  }, [domainBonus]);
+  }, [domainBonus,battleState?.meta?.armorDomain]);
 
   // 根据武魂修炼属性，取领域加成后的有效主属性值
   // 支持双生武魂各自修炼属性；混沌系自动匹配最高属性对应的领域倍率
@@ -694,7 +701,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
         // 🔴 恢复进行中战斗时，若处于敌方回合，需重新调度敌方行动定时器（防止remount后卡死）
         if (restoredPhase === 'enemyTurn') {
           actionLockRef.current = true;
-          scheduleEnemyAction(800);
+          scheduleEnemyAction(800,false);
         } else {
           actionLockRef.current = false;
         }
@@ -729,13 +736,13 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
       setPlayerHp(Math.min(player?.currentHp ?? attrs.hp, attrs.hp));
       setCurrentSoulPower(attrs.maxSoulPower);
       // 初始化完成后根据速度判定先手：敌人速度高于玩家则敌方先手
-      const playerSpd = attrs?.speed ?? 10;
+      const playerSpd = (attrs?.speed ?? 10)*armorDomainMultiplier(armorDomainRef.current,'speed');
       const enemySpd = enemy.speed ?? 10;
        if (enemySpd > playerSpd) {
          setPhase('enemyTurn');
          actionLockRef.current = true;
          // 敌方先手也走 scheduleEnemyAction 流程（魂灵先攻再敌方行动）
-         scheduleEnemyAction(1000);
+         scheduleEnemyAction(1000,false);
        } else {
         setPhase('playerTurn');
         actionLockRef.current = false;
@@ -800,10 +807,15 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
        setBattleSpirits(__fbRestoreSpirits([...activeSpirits,...specialBattleSpirits],battleState?.meta?.fierceEffects));
      }
      setInBattle(true);
+   }, [battleState, props.battleType, attrs, player, enemy, battleType, locationId, setInBattle]);
+
+   // 清理仅在卸载时执行，避免初始化保存触发更新后取消恢复回合。
+   useEffect(() => {
       return () => {
         // 🔴 组件卸载前强制同步保存战斗状态（从 ref 读取最新值，彻底绕开闭包陈旧）
         // 用于屏幕旋转、标签页切换等导致 BattlePage remount 的场景，确保血量不丢失
         flushBattleState();
+        battleInitRef.current=false;
        // 清理所有定时器
        clearEnemyTimer();
        if (domainAnimTimerRef.current) {
@@ -829,7 +841,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
        popupTimersRef.current.forEach((t) => clearTimeout(t));
        popupTimersRef.current = [];
      };
-   }, [battleState, props.battleType, attrs, player, enemy, battleType, locationId, setInBattle]);
+   }, []);
 
   // 🔴 切后台 / 屏幕旋转 / 窗口大小变化 时强制保存战斗状态（全部从 ref 读最新值）
   // 覆盖：切后台、切标签、最小化、横屏竖屏切换、浏览器缩放、开发者工具拖动 等所有可能重绘的场景
@@ -1105,10 +1117,12 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     }
     const variance = 0.9 + Math.random() * 0.2;
     base = base * variance;
+    if(isSkill&&!isEnemy&&!isSupport)base*=armorDomainMultiplier(armorDomainRef.current,'skill');
     const isCrit = Math.random() < Math.min(1, critRate);
     // 暴击伤害统一语义：critDmg 是「额外爆伤」，总爆伤 = 1.5 + critDmg
     const totalCritDmg = 1.5 + critDmg;
-    const finalDmg = isCrit ? Math.round(base * totalCritDmg) : Math.round(base);
+    const incoming=isEnemy?armorDomainMultiplier(armorDomainRef.current,'incoming'):1;
+    const finalDmg = isCrit ? Math.round(base * totalCritDmg*incoming) : Math.round(base*incoming);
      return { damage: Math.max(1, finalDmg), isCrit };
    }, [attrs?.armorResonanceActive,battleState?.meta?.shadow]);
 
@@ -1195,7 +1209,7 @@ function __fbEnemyTurn() {
   const spirits=battleSpiritsRef.current.filter(a=>!a.dead&&a.hp>0);
   const target=spirits.length?'spirit:'+spirits[Math.floor(Math.random()*spirits.length)].id:'player';
   let defense=target==='player'?Math.round(attrs.defense*domainEff.defMul*(1+(tempBuffs?.defense?.value||0))):s.actors[target].stats.defense;
-  const result=__fbEnemyAction(s,{target,defense});result.next.enemyActed=true;__fbCommit(result.next,result.logs);
+  const result=__fbEnemyAction(s,{target,defense,directDamageMultiplier:target==='player'?armorDomainMultiplier(armorDomainRef.current,'incoming'):1});result.next.enemyActed=true;__fbCommit(result.next,result.logs);
   if(result.damage>0)showDamagePopup(`-${fmtDmg(result.damage)}`,result.isCrit,'player');
   if(result.next.actors[target].hp<=0&&target!=='player')addLog(`魂灵「${result.next.actors[target].name}」已阵亡。`,'system');
   return true;
@@ -1825,6 +1839,7 @@ function __fbRestoreSpirits(spirits,saved) {
     actionLockRef.current = true;
     try {
       if (!hasDomain) return;
+    if(!domainActive&&armorDomainRef.current.turns){toast.info('斗铠领域正在生效，不能同时展开其他领域');return;}
 
     if (domainActive) {
       // 关闭领域：先清动画定时器，立即关闭，同时截断血量到新上限
@@ -1868,6 +1883,7 @@ function __fbRestoreSpirits(spirits,saved) {
     if (phase !== 'playerTurn') return;
     if (actionLockRef.current) return;
     if (!hasSecondDomain) return;
+    if(!secondDomainActive&&armorDomainRef.current.turns){toast.info('斗铠领域正在生效，不能同时展开其他领域');return;}
     actionLockRef.current = true;
     try {
       if (secondDomainActive) {
@@ -1965,12 +1981,12 @@ function __fbRestoreSpirits(spirits,saved) {
     const tbCost = getTrueBodyCost();
 
     // 1. 优先开启领域（如果有领域且魂力足够且未开启）
-    if (hasDomain && !domainActive && sp >= 100) {
+    if (hasDomain && !domainActive && !armorDomainRef.current.turns && sp >= 100) {
       handleToggleDomain();
       return;
     }
     // 双领域也开
-    if (hasSecondDomain && !secondDomainActive && sp >= 200) {
+    if (hasSecondDomain && !secondDomainActive && !armorDomainRef.current.turns && sp >= 200) {
       handleToggleSecondDomain();
       return;
     }
@@ -3854,7 +3870,12 @@ function __fbRestoreSpirits(spirits,saved) {
               </div>
             </div>
 
-            {dragonProgress(player).equipped && armorTier(player)>=2 && <button style={{padding:12,borderRadius:10,background:'#403568',color:'white',width:'100%',marginBottom:10}} disabled={phase!=='playerTurn'||!!(battleState?.meta as any)?.armorUsed||currentSoulPower<Math.ceil(attrs.maxSoulPower*.1)} onClick={()=>{
+            {dragonProgress(player).equipped && armorTier(player)>=3 && <div className="mb-2 rounded-xl border border-cyan-500/30 p-3 bg-cyan-950/30" data-armor-domain><div className="text-xs text-cyan-300 mb-2">{armorDomainRef.current.turns?'斗铠领域·'+ARMOR_DOMAIN_NAMES[armorDomainRef.current.style]+'：剩余 '+armorDomainRef.current.turns+' 次行动':ARMOR_DOMAIN_EFFECTS[dragonProgress(player).style]}</div><button className="w-full rounded-lg p-3 border border-cyan-500/40 text-cyan-200 disabled:opacity-40" disabled={phase!=='playerTurn'||armorDomainRef.current.used||domainActive||secondDomainActive||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={()=>{
+ if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;
+ const r=startArmorDomain(player,armorDomainRef.current,currentSoulPower,attrs.maxSoulPower,domainActive||secondDomainActive);if(r.reason){toast.info(r.reason);return;}
+ actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-r.cost));__armorCommit(r.state);addLog('展开斗铠领域·'+ARMOR_DOMAIN_NAMES[r.state.style]+'，持续后续3次己方行动，本次不追加普攻。','skill');scheduleEnemyAction(600);
+ }}>斗铠领域 · {armorDomainRef.current.used?'本场已使用':'魂力 '+Math.ceil(attrs.maxSoulPower*.15)}</button></div>}
+            {dragonProgress(player).equipped && armorTier(player)>=2 && <button className="w-full mb-2 p-3 rounded-lg border border-cyan-500/30 text-cyan-200 bg-cyan-950/30 disabled:opacity-40" disabled={phase!=='playerTurn'||!!(battleState?.meta as any)?.armorUsed||currentSoulPower<Math.ceil(attrs.maxSoulPower*.1)} onClick={()=>{
                 if(phase!=='playerTurn'||actionLockRef.current||!__fbSkillAllowed()||(battleState?.meta as any)?.armorUsed)return;
                 const cost=Math.ceil(attrs.maxSoulPower*.1);if(currentSoulPower<cost)return;
                 actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-cost));

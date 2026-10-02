@@ -747,6 +747,7 @@ function __fbEnemyAction(state,context={},rng=Math.random) {
     const variance=.9+rng()*.2;isCrit=rng()<Math.min(.15,.05+a.stats.attack/5000);
     damage=Math.max(1,Math.round(attr*(useSkill?3:1)*500/(def+500)*variance*(isCrit?1.5:1)));
     if(rule.execute&&t.hp/t.maxHp<.3)damage=Math.round(damage*(1+rule.execute));
+    damage=Math.max(1,Math.round(damage*Math.min(1,Math.max(0,context.directDamageMultiplier??1))));
     const parts=rule.parts||1;
     // Split an unchanged damage budget, so rounding never increases total damage.
     for(let i=0;i<parts&&a.hp>0&&t.hp>0;i++){
