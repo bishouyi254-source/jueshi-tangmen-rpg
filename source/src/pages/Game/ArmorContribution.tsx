@@ -10,6 +10,6 @@ export default function ArmorContribution({player,attributes}:{player:any;attrib
  // Armor is the final five-stat multiplier in calcAttributes; reverse that multiplier.
  const amount=Math.round(attributes[k]-attributes[k]/(1+bonus[k]));
  return <div key={k} className="rounded-lg border border-cyan-500/20 p-2 text-xs"><span className="text-cyan-400">{labels[k]}</span><strong className="block text-cyan-200">+{formatNumber(amount)}</strong><span className="text-cyan-400">+{(bonus[k]*100).toFixed(1)}%</span></div>})}</div>
- <p className="text-[10px] text-cyan-400 mt-2">装备后构成：部件五维 +{(b.parts*100).toFixed(1)}%；套装方向{labels[b.directionKey]} +{(b.direction*100).toFixed(1)}%；属性契合{labels[b.resonanceKey]} +{(b.resonance*100).toFixed(1)}%。数值为当前面板中斗铠贡献的约值，包含取整。</p>
+ <p className="text-[10px] text-cyan-400 mt-2">装备后构成：部件五维 +{(b.parts*100).toFixed(1)}%；套装方向{labels[b.directionKey]} +{(b.direction*100).toFixed(1)}%；属性契合{labels[b.resonanceKey]} +{(b.resonance*100).toFixed(1)}%{b.passive?'；四字被动'+labels[b.passiveKey]+' +5.0%':''}。数值为当前面板中斗铠贡献的约值，包含取整。</p>
  </div>;
 }

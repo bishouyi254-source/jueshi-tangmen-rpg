@@ -1,3 +1,4 @@
+import AbyssFrontierPanel from './AbyssFrontierPanel';
 import SweepSettings from './SweepSettings';
 import { formatNumber } from '@/lib/utils';
 import type { SweepFilterSummary } from '@/lib/sweepFilter';
@@ -21,7 +22,7 @@ import SoulRing from '@/components/SoulRing';
 import TianmengSacrificeDialog from '@/components/TianmengSacrificeDialog';
 import { scopedStorage, logger } from '@lark-apaas/client-toolkit-lite';
 
-type MapView = 'bigMap' | 'starForest' | 'starForestZone' | 'starForestDungeons' | 'sun-mountains' | 'mountain-dungeons' | 'exploration' | 'attribute-select' | 'shrekAcademy' | 'freshman' | 'freshTasks' | 'exam' | 'outerCourt' | 'arena' | 'innerCourt' | 'mentorship' | 'seaGodPavilion' | 'beiji' | 'beijiZone' | 'beijiDungeons' | 'beijiCore' | 'lifeLake' | 'spiritTower' | 'teaCity' | 'iceFireEye' | 'iceFireExplore';
+type MapView = 'abyssFrontier' | 'bigMap' | 'starForest' | 'starForestZone' | 'starForestDungeons' | 'sun-mountains' | 'mountain-dungeons' | 'exploration' | 'attribute-select' | 'shrekAcademy' | 'freshman' | 'freshTasks' | 'exam' | 'outerCourt' | 'arena' | 'innerCourt' | 'mentorship' | 'seaGodPavilion' | 'beiji' | 'beijiZone' | 'beijiDungeons' | 'beijiCore' | 'lifeLake' | 'spiritTower' | 'teaCity' | 'iceFireEye' | 'iceFireExplore';
 
 interface IceFireDrop {
   type: 'immortal' | 'spirit' | 'coin' | 'soulbone';
@@ -450,7 +451,8 @@ export default function MapPanel() {
       sweepExplore, getSweepCount, incrementSweepCount,
     } = useGame();
 
-  const [view, setView] = useState<MapView>('bigMap');
+  const [view, setView] = useState<MapView>(lastBattleResult?.locationId==='abyss-frontier'&&player?.level>=99?'abyssFrontier':'bigMap');
+  useEffect(()=>{if(!inBattle&&lastBattleResult?.locationId==='abyss-frontier'&&player?.level>=99)setView('abyssFrontier');},[inBattle,lastBattleResult]);
   const [currentZone, setCurrentZone] = useState<ForestZone | null>(null);
   const [currentBeijiZone, setCurrentBeijiZone] = useState<BeijiZone | null>(null);
   const [currentMountain, setCurrentMountain] = useState<MountainZone | null>(null);
@@ -1897,6 +1899,7 @@ export default function MapPanel() {
   // === 渲染：大地图 ===
   if (!player) return null;
 
+  if(view==='abyssFrontier')return <AbyssFrontierPanel onBack={()=>setView('bigMap')}/>;
   if (view === 'bigMap') {
      const coreRegions = [
        { id: 'shrek', name: '史莱克学院', desc: '大陆第一学院，魂师的圣地', icon: GraduationCap, locked: false, tag: '修炼·学院', action: enterShrekAcademy },
@@ -1906,6 +1909,7 @@ export default function MapPanel() {
      ];
 
      const secretRegions = [
+       {id:'abyss-frontier',name:'血神军团 · 深渊前线',desc:'三章九关，赢取军功与神锻结晶',icon:Shield,locked:player.level<99,tag:'后期·斗铠',action:()=>setView('abyssFrontier'),lockedMsg:'需达到99级'},
        { id: 'spirit-tower', name: '传灵塔', desc: '传承魂灵的神秘之地，12属性副本', icon: Ghost, locked: (player?.level ?? 0) < 20, tag: '魂灵·契约', action: enterSpiritTower, lockedMsg: '需达到20级方可进入' },
        { id: 'tea-city', name: '茶城', desc: '茶香氤氲的邂逅之城，名士佳人云集', icon: Sparkles, locked: (player?.level ?? 0) < 60, tag: '邂逅·伴侣', action: enterTeaCity, lockedMsg: '需达到60级方可进入' },
        { id: 'ice-fire-eye', name: '冰火两仪眼', desc: '天然聚宝盆，珍稀仙草遍地的阴阳秘境', icon: Flower2, locked: (player?.level ?? 0) < 20, tag: '仙草·探秘', action: enterIceFireEye, lockedMsg: '需达到20级方可进入' },

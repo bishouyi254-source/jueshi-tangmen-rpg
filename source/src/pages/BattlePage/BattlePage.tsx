@@ -1,5 +1,6 @@
+import {abyssAction,abyssProgress,abyssReward} from '@/lib/abyssFrontier';
 import { recordLiehunHit, type LiehunLedger } from '@/lib/liehunGrowth';
-import {readArmorDomain,startArmorDomain,finishArmorDomainAction,armorDomainMultiplier,ARMOR_DOMAIN_NAMES,ARMOR_DOMAIN_EFFECTS} from '@/lib/armorDomain';
+import {readArmorDomain,startArmorDomain,finishArmorDomainAction,armorDomainMultiplier,ARMOR_DOMAIN_NAMES,ARMOR_DOMAIN_EFFECTS,armorDomainDescription} from '@/lib/armorDomain';
 import {dragonAction,dragonProgress,armorTier} from '@/lib/dragonLegend';
 import {__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus} from '@/lib/fierceEffects';
 import {__localShadowAction} from '@/lib/shadow';
@@ -1154,7 +1155,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   // ============================================================
 // Injected inside the BattlePage component; bindings are its existing state/ref setters.
 function __fbGet() {
-  if(battleType!=='fierce-beast'||!__FBProfiles[enemy.id]||!attrs||!battleInitRef.current)return null;
+  if((battleType!=='fierce-beast'&&!battleState?.meta?.abyss)||!__FBProfiles[enemy.id]||!attrs||!battleInitRef.current)return null;
   if(!__fbRef.current||__fbRef.current.beastId!==enemy.id){
     const saved=battleState?.meta?.fierceEffects;
     // The mount effect has initialized React state, but the HP mirror effects
@@ -1240,7 +1241,7 @@ function __fbRestoreSpirits(spirits,saved) {
   return saved?.version===1?spirits.map(a=>{const x=saved.actors?.['spirit:'+a.id];return x?{...a,hp:Math.max(0,Math.min(a.maxHp,x.hp)),dead:x.hp<=0}:a;}):spirits;
 }
 
-  useEffect(()=>{if(battleType==='fierce-beast'&&phase==='playerTurn'&&battleInitRef.current&&!battleEndedRef.current)__fbEnterPlayer();},[phase]);
+  useEffect(()=>{if((battleType==='fierce-beast'||battleState?.meta?.abyss)&&phase==='playerTurn'&&battleInitRef.current&&!battleEndedRef.current)__fbEnterPlayer();},[phase]);
   const spiritAttack = useCallback((): Promise<number> => {
     return new Promise((resolve) => {
       const aliveSpirits = battleSpirits.filter((s) => !s.dead && s.hp > 0);
@@ -2142,6 +2143,7 @@ function __fbRestoreSpirits(spirits,saved) {
         clearTimeout(secondDomainAnimTimerRef.current);
         secondDomainAnimTimerRef.current = null;
       }
+       if(battleState?.meta?.abyss){const t=battleState.meta.abyss;const result=abyssAction(player,{type:'win',id:t.id});setPlayer(p=>abyssAction(p,{type:'win',id:t.id}).player);addLog(result.message||'深渊战斗已结算','system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
        if((battleState?.meta as any)?.ascension){const trial=(battleState.meta as any).ascension;setPlayer(p=>dragonAction(p,{type:'win',id:trial.id}).player);addLog('升灵台试炼成功，灵力 +'+trial.reward,'system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
        if(battleState?.meta?.shadow){setRewards({items:[],soulBones:[],ring:null,exp:battleState.meta.expReward||0,coins:battleState.meta.coinReward||0});setVictoryStep('summary');setPhase('victory');return;}
        const isArenaOrExam = battleType === 'arena' || battleType === 'shrek-exam';
@@ -2863,7 +2865,7 @@ function __fbRestoreSpirits(spirits,saved) {
         </span>
       </header>
 
-         {battleType==='fierce-beast'&&__FBProfiles[enemy.id]&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
+         {(battleType==='fierce-beast'||battleState?.meta?.abyss)&&__FBProfiles[enemy.id]&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
          {battleState?.meta?.shadow&&<div role="status" className="px-3 py-2 text-purple-300">轮回领域已展开：全属性 +{battleState.meta.shadow.lifeIndex*10}%，魂技伤害 +{battleState.meta.shadow.lifeIndex}%</div>}
          {/* 战斗主区域 - flex-1 占满剩余空间 */}
          <div className="flex-1 flex flex-col px-2 md:px-8 py-2 md:py-6 gap-2 md:gap-8 relative overflow-hidden min-h-0 w-full max-w-6xl mx-auto">
@@ -3466,6 +3468,7 @@ function __fbRestoreSpirits(spirits,saved) {
                     </div>
                   )}
                   {liehunRef.current?.eligible && <div className="rounded-xl border border-purple-500/25 bg-card/60 p-3 text-xs" data-liehun-reward>碎念汲取：玩家直接伤害 {formatNumber(liehunRef.current.damage)}，永久精神力 +{formatNumber(Math.floor(liehunRef.current.damage/1e16))}</div>}
+                  {battleState?.meta?.abyss&&<div className="rounded-xl border border-cyan-500/30 p-3 text-sm text-cyan-200" data-abyss-reward>深渊奖励已入账：军功 +{battleState.meta.abyss.reward?.merit||0} · 结晶 +{battleState.meta.abyss.reward?.crystals||0}{battleState.meta.abyss.first&&<p className="text-xs mt-2">首通：矿石 +{battleState.meta.abyss.reward?.ore||0} · 魂锻沉银 +{battleState.meta.abyss.reward?.soulforged||0}</p>}</div>}
                   {(rewards.exp > 0 || rewards.coins > 0) && (
                     <div className="flex items-center justify-center gap-4 text-sm mb-3">
                       {rewards.exp > 0 && (
@@ -3888,10 +3891,10 @@ function __fbRestoreSpirits(spirits,saved) {
               </div>
             </div>
 
-            {dragonProgress(player).equipped && armorTier(player)>=3 && <div className="mb-2 rounded-xl border border-cyan-500/30 p-3 bg-cyan-950/30" data-armor-domain><div className="text-xs text-cyan-300 mb-2">{armorDomainRef.current.turns?'斗铠领域·'+ARMOR_DOMAIN_NAMES[armorDomainRef.current.style]+'：剩余 '+armorDomainRef.current.turns+' 次行动':ARMOR_DOMAIN_EFFECTS[dragonProgress(player).style]}</div><button className="w-full rounded-lg p-3 border border-cyan-500/40 text-cyan-200 disabled:opacity-40" disabled={phase!=='playerTurn'||armorDomainRef.current.used||domainActive||secondDomainActive||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={()=>{
+            {dragonProgress(player).equipped && armorTier(player)>=3 && <div className="mb-2 rounded-xl border border-cyan-500/30 p-3 bg-cyan-950/30" data-armor-domain><div className="text-xs text-cyan-300 mb-2">{armorDomainRef.current.turns?'斗铠领域·'+ARMOR_DOMAIN_NAMES[armorDomainRef.current.style]+'：剩余 '+armorDomainRef.current.turns+' 次行动':armorDomainDescription(dragonProgress(player).style,armorTier(player))}</div><button className="w-full rounded-lg p-3 border border-cyan-500/40 text-cyan-200 disabled:opacity-40" disabled={phase!=='playerTurn'||armorDomainRef.current.used||domainActive||secondDomainActive||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={()=>{
  if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;
  const r=startArmorDomain(player,armorDomainRef.current,currentSoulPower,attrs.maxSoulPower,domainActive||secondDomainActive);if(r.reason){toast.info(r.reason);return;}
- actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-r.cost));__armorCommit(r.state);addLog('展开斗铠领域·'+ARMOR_DOMAIN_NAMES[r.state.style]+'，持续后续3次己方行动，本次不追加普攻。','skill');scheduleEnemyAction(600);
+ actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-r.cost));__armorCommit(r.state);addLog('展开斗铠领域·'+ARMOR_DOMAIN_NAMES[r.state.style]+'，持续后续'+r.state.turns+'次己方行动，本次不追加普攻。','skill');scheduleEnemyAction(600);
  }}>斗铠领域 · {armorDomainRef.current.used?'本场已使用':'魂力 '+Math.ceil(attrs.maxSoulPower*.15)}</button></div>}
             {dragonProgress(player).equipped && armorTier(player)>=2 && <button className="w-full mb-2 p-3 rounded-lg border border-cyan-500/30 text-cyan-200 bg-cyan-950/30 disabled:opacity-40" disabled={phase!=='playerTurn'||!!(battleState?.meta as any)?.armorUsed||currentSoulPower<Math.ceil(attrs.maxSoulPower*.1)} onClick={()=>{
                 if(phase!=='playerTurn'||actionLockRef.current||!__fbSkillAllowed()||(battleState?.meta as any)?.armorUsed)return;

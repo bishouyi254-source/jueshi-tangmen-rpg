@@ -1,3 +1,4 @@
+import {abyssProgress,abyssAction,reincarnateAbyss} from './abyssFrontier';
 import { STAMINA_CAP, godLevelExp, freshGrowthRules, migrateGrowthRules, godBreakthroughError, applyGodBreakthrough, type GrowthRules } from '@/lib/growthBatch3';
 import { hasLiehun, readNianBonus, createLiehunLedger, settleLiehunGrowth, type LiehunLedger, type NianBonus } from '@/lib/liehunGrowth';
 import { filterSweepDrops, normalizeSweepYears, type SweepFilterSummary } from '@/lib/sweepFilter';
@@ -703,6 +704,7 @@ function getDomainMultiplier(level: number): number {
 // 玩家数据
 export interface IPlayer {
   dragonLegend?: import('./dragonLegend').DragonProgress;
+  abyssFrontier?: import('./abyssFrontier').AbyssProgress;
   name: string;
   martialSoul: IMartialSoul;
   soulPower: number; // 先天魂力
@@ -1573,6 +1575,7 @@ export interface IAttrs {
 
 // 转世轮回 - 轮回球（每一世的记录快照）
 export interface IReincarnationOrb {
+  dragonLegend?: import('./dragonLegend').DragonProgress;
   index: number;           // 第几世（1-based）
   timestamp: number;       // 转世时间戳
   name: string;            // 角色名
@@ -4736,7 +4739,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         data.sweepAutoDestroyRingYears = normalizeSweepYears(data.sweepAutoDestroyRingYears);
         data.sweepAutoSellBoneYears = normalizeSweepYears(data.sweepAutoSellBoneYears);
         data = reconcileGodUnlock(data);
-        data.dragonLegend=dragonProgress(data);
+        data.dragonLegend=dragonProgress(data);data.abyssFrontier=abyssProgress(data);
         for(const soul of [data.martialSoul,data.secondSoul]) {if(soul?.name==='吞噬茶')soul.name='混沌无极';}
         if(data.reincarnation?.orbs)for(const orb of data.reincarnation.orbs)for(const soul of [orb.martialSoul,orb.secondSoul])if(soul?.name==='吞噬茶')soul.name='混沌无极';
         if(data.firstRingYearBonusGiven||data.companions?.details?.['tc-yinyangcha']?.firstRingYearBonusGiven)data.liangyiFirstBonusGiven=true;
@@ -5996,6 +5999,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         inventoryCount: (player.inventory || []).length,
         inventory: [...(player.inventory || [])],
        attributes: currentAttrs,
+       dragonLegend: JSON.parse(JSON.stringify(dragonProgress(player))),
        recruitedCount: (player.recruited || []).length,
        teamCount: (player.team || []).length + 1, // 含玩家自身
        domainName: player.domain?.name || '',
@@ -6062,6 +6066,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const newPlayer: IPlayer = {
           ...baseP,
           dragonLegend: reincarnateDragon(player),
+          abyssFrontier: reincarnateAbyss(player),
           name: finalName,
           direction: player.direction,
           isTwinSoul: isTwinAfterReroll,
@@ -11076,7 +11081,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // 神界BOSS：防御强制为0，真实伤害
       // 普通怪物：防御降低95%
       let enemyDef = (enemy.defense && !isNaN(enemy.defense) && enemy.defense > 0) ? enemy.defense : 0;
-      if (config.meta?.shadow) { /* recorded defense */ } else if (isGodRealmBoss) {
+      if (config.meta?.shadow||config.meta?.abyss) { /* fixed or recorded defense */ } else if (isGodRealmBoss) {
         enemyDef = 0;
       } else {
         enemyDef = Math.floor(enemyDef * 0.05);
@@ -11087,7 +11092,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       // 🔴 全局怪物属性小幅度加强10%（魂兽/神界BOSS/茶城挑战/神考守卫/副本怪物全部覆盖）
       // 血量+10%、攻击+10%、防御+10%、速度+10%、精神+10%
-      if(!config.meta?.shadow){
+      if(!config.meta?.shadow&&!config.meta?.abyss){
       safeHp = Math.max(1, Math.floor(safeHp * 1.1));
       safeAtk = Math.max(1, Math.floor(safeAtk * 1.1));
       if (safeDef > 0) {
@@ -11133,6 +11138,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setLastBattleResult({ phase: battleState.phase as 'victory' | 'defeat' | 'flee', battleType: battleState.battleType, locationId: battleState.locationId });
     }
     const ascensionId=(battleState?.meta as any)?.ascension?.id;
+    const abyssId=battleState?.meta?.abyss?.id;
     const bType = battleState?.battleType;
     const bPhase = battleState?.phase as 'victory' | 'defeat' | 'flee' | undefined;
     setBattleState(null);
@@ -11141,6 +11147,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setPlayer((p) => {
       const attrs = calcAttributes(p);
       let np = ascensionId ? dragonAction(p,{type:"leave",id:ascensionId}).player : { ...p };
+      if(abyssId)np=abyssAction(np,{type:"leave",id:abyssId}).player;
       np.currentHp = attrs.hp; // 战斗结束回满/修正血量（可能因buff溢出超过上限）
       // 神考战斗结果处理
       if (bType && bPhase) {
@@ -11710,7 +11717,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }), [player, attributes, hasSave, loading, exploration, battleState, lastBattleResult, inBattle, clearNewAchievements, unlockedAchievementIds, getAchievementProgress, sweepExplore, getSweepCount, incrementSweepCount, getReincarnationShadow, hasShadowChallengedToday, startShadowChallenge, claimShadowVictory]);
 
   const localBattleLoaded=useRef(false);
-  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&(x.battle.enemy?.hp>0 || x.battle.phase==='victory')){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension||(battleState?.meta as any)?.armorDomain?.used||(battleState?.meta as any)?.liehunGrowth))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
+  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&(x.battle.enemy?.hp>0 || x.battle.phase==='victory')){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension||(battleState?.meta as any)?.abyss||(battleState?.meta as any)?.armorDomain?.used||(battleState?.meta as any)?.liehunGrowth))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 

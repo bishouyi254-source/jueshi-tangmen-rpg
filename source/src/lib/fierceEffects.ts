@@ -1,3 +1,4 @@
+import {ABYSS_NODES} from './abyssFrontier';
 // BEGIN FIERCE EFFECTS ENGINE v1
 // Pure battle rules. State is JSON serializable; no storage or React access.
 var __FBProfiles = {
@@ -781,4 +782,5 @@ function __fbStatus(s) {
 }
 // END FIERCE EFFECTS ENGINE
 
+for(const n of ABYSS_NODES)__FBProfiles[n.id]={id:n.id,name:n.name,skills:['深渊侵袭','暗潮秘术','深渊威压'],attr:n.attr,immortal:false,rules:n.rules};
 export {__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus};
