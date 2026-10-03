@@ -2361,7 +2361,7 @@ function __fbRestoreSpirits(spirits,saved) {
       if (isFierceBeast) {
         const y = enemy.years;
         // 经验：10万~20万 随机（凶兽比普通核心区魂兽强，但远不至于几千万）
-        expGain = Math.round(100000 + Math.random() * 100000);
+        expGain = Math.round((100000 + Math.random() * 100000) * 1.5);
         coinGain = Math.round(250000 + Math.random() * 250000);
         if (expGain > 0) addExp(expGain);
         if (coinGain > 0) addCoins(coinGain);
@@ -2410,7 +2410,7 @@ function __fbRestoreSpirits(spirits,saved) {
        // 山脉副本：经验按年限给，金币用副本预设值
        const y = enemy.years;
        let baseExp = y < 1000 ? 200 : y < 10000 ? 600 : y < 100000 ? 1500 : 3000;
-       expGain = Math.round(baseExp * (0.9 + Math.random() * 0.2));
+       expGain = Math.round(baseExp * (0.9 + Math.random() * 0.2) * 1.5);
        coinGain = (battleState?.meta as BattleMeta)?.coinReward ?? 50;
      } else if (!isArenaOrExam) {
        const y = enemy.years;
@@ -2445,7 +2445,7 @@ function __fbRestoreSpirits(spirits,saved) {
        }
       // 在基础值的 100%~120% 区间内浮动
       const randomFactor = 1 + factor * 0.2;
-      expGain = Math.round(baseExp * randomFactor);
+      expGain = Math.round(baseExp * randomFactor * 1.5);
       coinGain = Math.round(baseCoin * randomFactor);
 
       // 核心区 / 生命之湖（六节点探索 & 直接猎魂）：击败魂兽固定获得 5万~8万 经验
@@ -2460,7 +2460,7 @@ function __fbRestoreSpirits(spirits,saved) {
         (exploreTier && coreKeywords.some(k => String(exploreTier).includes(k)))
       );
       if (isCoreOrLake) {
-        expGain = Math.round(50000 + Math.random() * 30000); // 50000 ~ 80000 随机
+        expGain = Math.round((50000 + Math.random() * 30000) * 1.5); // 75000 ~ 120000 随机
       }
     }
 

@@ -1,3 +1,4 @@
+import { STAMINA_CAP } from './growthBatch3';
 // Dragon Legend progression. All resource changes are one pure transaction.
 export const ARMOR_PARTS = ['头箍','胸铠','左肩铠','右肩铠','左手甲','右手甲','护腰战裙','左大腿铠','右大腿铠','左战靴','右战靴'];
 export const TRIALS = [
@@ -42,7 +43,7 @@ export function armorBonuses(p:any){
 }
 export function dragonAction(p:any,a:any,now=Date.now()):{player:any;reason?:string;message?:string} {
   const fail=(reason:string)=>({player:p,reason});if(!p)return fail('请先进入角色');
-  const d=dragonProgress(p);let coins=p.soulCoins||0;const stamina=Math.min(6000,(p.stamina||0)+Math.max(0,Math.floor((now-(p.staminaUpdatedAt||now))/1000))*100);let energy=stamina;
+  const d=dragonProgress(p);let coins=p.soulCoins||0;const stamina=Math.min(STAMINA_CAP,(p.stamina||0)+Math.max(0,Math.floor((now-(p.staminaUpdatedAt||now))/1000))*100);let energy=stamina;
   const spend=(c:number,e=0)=>{if(coins<c)return '魂币不足';if(energy<e)return '体力不足';coins-=c;energy-=e;return '';};
   let spirits=p.soulSpirits||[],message='操作成功';
   switch(a.type){

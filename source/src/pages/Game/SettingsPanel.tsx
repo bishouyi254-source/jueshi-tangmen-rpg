@@ -10,7 +10,7 @@ interface SettingsPanelProps {
 }
 
 export default function SettingsPanel({ onBack }: SettingsPanelProps) {
-  const { resetGame } = useGame();
+  const { resetGame, player } = useGame();
   const navigate = useNavigate();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -36,6 +36,11 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
         </h2>
       </div>
 
+      {player?.growthRules?.waterMigration === 'needs-review' && (
+        <div className="rounded-xl border border-amber-500/30 bg-card/60 p-3 text-xs text-amber-200">
+          生命之水旧档记录无法区分已获加成，已保留原值，未自动重复补发。请保留存档副本后核对。
+        </div>
+      )}
       {/* 存档管理 */}
       <div className="rounded-2xl border border-border/40 bg-card/40 overflow-hidden">
         <div className="p-3 border-b border-border/30">

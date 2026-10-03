@@ -1646,8 +1646,8 @@ export const WATER_OF_LIFE: IItem = {
   quality: 'legendary',
   qualityColor: '#fcd34d',
   iconChar: '命',
-  description: '生命之湖的本源精华，拥有极其庞大的生命力量。服用后全属性提升40%，一生仅可服用一次。',
-  effect: 'water-of-life:allAttr+40%',
+  description: '生命之湖的本源精华，拥有极其庞大的生命力量。服用后全属性提升200%，一生仅可服用一次。',
+  effect: 'water-of-life:allAttr+200%',
   sellPrice: 500000,
   quantity: 1,
 };
@@ -1879,10 +1879,10 @@ export function getConsumableExtra(item: IItem): ConsumableExtra | null {
     return {
       subType: 'water-of-life',
       elementReq: [],
-      attrBonus: { allAttr: 40 },
+      attrBonus: { allAttr: 200 },
       cap: 1,
       capKey: 'waterOfLife',
-      effectDesc: '生命之水，全属性+40%（一生仅限服用一次）',
+      effectDesc: '生命之水，全属性+200%（一生仅限服用一次）',
     };
   }
   if (effect.startsWith('polar-ice-jade:')) {

@@ -1,3 +1,4 @@
+import { STAMINA_CAP, godLevelExp, freshGrowthRules, migrateGrowthRules, godBreakthroughError, applyGodBreakthrough, type GrowthRules } from '@/lib/growthBatch3';
 import { hasLiehun, readNianBonus, createLiehunLedger, settleLiehunGrowth, type LiehunLedger, type NianBonus } from '@/lib/liehunGrowth';
 import { filterSweepDrops, normalizeSweepYears, type SweepFilterSummary } from '@/lib/sweepFilter';
 import { hasDefeatedHundun, reconcileGodUnlock } from '@/lib/godUnlock';
@@ -287,6 +288,8 @@ export function getRealmDisplay(level: number, _ringCount: number, title?: strin
 }
 
 export function getMaxExp(level: number, easterStage = 0): number {
+  // 百级起每10级乘3；统一乘0.7，不改变99级彩蛋修炼。
+  if (level >= 100) return godLevelExp(level);
   // 99级极限斗罗之上，按彩蛋境阶段位返回对应所需经验（每阶500万）
   if (level >= 99) {
     return getEasterRealmExp(easterStage);
@@ -303,7 +306,8 @@ export function getMaxExp(level: number, easterStage = 0): number {
   return 500000; // 91-98级
 }
 
-export function isBottleneck(level: number): boolean {
+export function isBottleneck(level: number, brokenBottlenecks: number[] = []): boolean {
+  if (level >= 100 && brokenBottlenecks.includes(level)) return false;
   // 9/19/29/39/49/59/69/79/89 是普通瓶颈（闭关突破）
   // 98 级是最终瓶颈（需魂核突破到 99 级）
   // 100级以上：109/119/129/... 是神级瓶颈（需法则突破）
@@ -806,6 +810,8 @@ export interface IPlayer {
   // 消耗品服用记录
   consumableCounts: Record<string, number>; // capKey -> 已服用数量（用于上限判定和显示）
   // 消耗品带来的属性加成（所有百分比已折算好，直接加到对应属性上）
+  growthRules?: GrowthRules;
+  brokenBottlenecks?: number[];
   consumableBonus: {
     attackPct: number;    // 攻击百分比加成（0.02 = +2%）
     defensePct: number;   // 防御百分比加成
@@ -986,9 +992,9 @@ const EMPTY_SOUL_BONES: ISoulBoneSlots = {
   leftLeg: null, rightLeg: null, external: null,
 };
 
-// 体力上限统一为 6000 点（所有玩家一致，不再随等级变化）
+// 体力上限统一为 10000 点（所有玩家一致，不再随等级变化）
 export function getStaminaMax(_level: number): number {
-  return 6000;
+  return STAMINA_CAP;
 }
 
 // 体力恢复：每秒 100 点，最多到上限
@@ -1076,6 +1082,8 @@ export function createNewPlayer(name: string, direction: string, soul: IMartialS
     secondDomain: null,
     seaGodDefeatedIds: [],
     seaGodPosition: -1, // -1 表示未进入海神阁
+    growthRules: freshGrowthRules(),
+    brokenBottlenecks: [],
     consumableCounts: {},
     consumableBonus: {
       attackPct: 0, defensePct: 0, speedPct: 0, spiritPct: 0, hpPct: 0, allAttrPct: 0,
@@ -2022,9 +2030,9 @@ export function calcAttributes(player: IPlayer): IAttrs {
     }
   }
 
-  // 消耗品单属性百分比加成（仙草单属性 / 属性灵草百分比等，调整系数使效果约为描述的60%，避免过度膨胀）
+  // 消耗品单属性百分比加成（仙草单属性 / 属性灵草百分比等，按已保存加成完整计算）
   const cb = player.consumableBonus;
-  const CONSUMABLE_PCT_SCALE = 0.6;
+  const CONSUMABLE_PCT_SCALE = 1;
   if (cb) {
     if (cb.attackPct > 0) attack *= (1 + cb.attackPct * CONSUMABLE_PCT_SCALE);
     if (cb.defensePct > 0) defense *= (1 + cb.defensePct * CONSUMABLE_PCT_SCALE);
@@ -2047,7 +2055,7 @@ export function calcAttributes(player: IPlayer): IAttrs {
     hp = hp * (1 + allAttrPct);
   }
 
-   // 消耗品固定数值加成（属性灵草等，百分比衰减系数与上面一致）
+   // 消耗品固定数值加成（属性灵草等，按已保存固定值完整计算）
    // 🔴 修复：移到全属性百分比乘法之后，避免被 allAttrPct 二次放大导致战力异常
    if (cb) {
      attack += Math.round((cb.attackFix ?? 0) * CONSUMABLE_PCT_SCALE);
@@ -5066,6 +5074,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
               if (typeof cb.hpFix !== 'number') cb.hpFix = 0;
             }
 
+          data = migrateGrowthRules(data);
+
           // 魂骨年限化迁移：旧存档魂骨根据 quality 自动推导 soulBoneYears
           // 注意：标签必须按实际年限计算（quality=legendary 可能对应十万年或百万年）
           const qualityToYears: Record<string, number> = {
@@ -5823,7 +5833,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
                 safeCounter++;
                 const maxExp = getMaxExp(curLevel, p.easterRealmStage);
                 if (curExp < maxExp) break;
-                if (isBottleneck(curLevel)) { curExp = maxExp; break; }
+                if (isBottleneck(curLevel, p.brokenBottlenecks)) { curExp = maxExp; break; }
                 if (curLevel >= 99) { const cap = getMaxExp(99, p.easterRealmStage); if (curExp > cap) curExp = cap; break; }
                 const nextMaxRings = getMaxRings(curLevel + 1);
                 if (nextMaxRings > p.soulRings.length) { curExp = maxExp; break; }
@@ -6071,7 +6081,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           // 🔴 防御性重置：魂币重置为初始值，避免上一世财富残留
           soulCoins: 100,
           // 🔴 防御性重置：体力重置为满值 + 更新时间戳
-          stamina: 6000,
+          stamina: STAMINA_CAP,
           staminaUpdatedAt: Date.now(),
           // 🔴 防御性重置：魂核系统清零
           soulCoreType: 'none',
@@ -6106,6 +6116,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           soulBones: { ...EMPTY_SOUL_BONES },
           // 🔴 防御性重置：消耗品服用记录与加成显式清零（仙草/灵草/生命之水等）
            consumableCounts: {},
+           growthRules: freshGrowthRules(),
+           brokenBottlenecks: [],
            consumableBonus: {
              attackPct: 0, defensePct: 0, speedPct: 0, spiritPct: 0, hpPct: 0, allAttrPct: 0,
              attackFix: 0, defenseFix: 0, speedFix: 0, spiritFix: 0, hpFix: 0,
@@ -6842,7 +6854,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       while (true) {
         const maxExp = getMaxExp(curLevel);
         if (curExp < maxExp) break;
-        if (isBottleneck(curLevel)) {
+        if (isBottleneck(curLevel, p.brokenBottlenecks)) {
           // 瓶颈，经验停在满级满
           curExp = maxExp;
           bottleneck = true;
@@ -6873,8 +6885,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
             const actualGlp = p.divineTrial?.godLevelProgress;
             if (actualGlp?.unlocked && curLevel < actualGlp.levelCap) {
              // 百级以上也有瓶颈（x9级），遇到瓶颈就停住
-             if (isBottleneck(curLevel)) {
-               const cap = getMaxExp(99, p.easterRealmStage);
+             if (isBottleneck(curLevel, p.brokenBottlenecks)) {
+               const cap = getMaxExp(curLevel, p.easterRealmStage);
                if (curExp > cap) curExp = cap;
                bottleneck = true;
                break;
@@ -6883,7 +6895,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
              const nextLevel = curLevel + 1;
               if (nextLevel > actualGlp.levelCap) {
                // 达上限，停在满级满经验
-               const cap = getMaxExp(99, p.easterRealmStage);
+               const cap = getMaxExp(curLevel, p.easterRealmStage);
                if (curExp > cap) curExp = cap;
                break;
              }
@@ -6922,7 +6934,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
               continue; // 继续循环判断
            }
            // 未解锁或已达上限：经验累积到当前阶段上限，不自动升级
-           const cap = getMaxExp(99, p.easterRealmStage);
+           const cap = getMaxExp(curLevel, p.easterRealmStage);
            if (curExp > cap) curExp = cap;
            break;
          }
@@ -6943,7 +6955,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       newLevel = curLevel;
       // 自动结算待发放等级奖励（非瓶颈、非满级时）
       let pendingBonus = p.divineTrial.pendingLevelBonus ?? 0;
-      if (pendingBonus > 0 && curLevel < 99 && !isBottleneck(curLevel)) {
+      if (pendingBonus > 0 && curLevel < 99 && !isBottleneck(curLevel, p.brokenBottlenecks)) {
         // 同时检查魂环数量限制，避免神考等级奖励绕过魂环瓶颈
         while (pendingBonus > 0 && curLevel < 99 && !isBottleneck(curLevel + 1) && getMaxRings(curLevel + 1) <= p.soulRings.length && !(isQibaoLiuliLocked && curLevel >= 79) && !(isLuosanpaoLocked && curLevel >= 29)) {
           curLevel += 1;
@@ -7265,6 +7277,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return {
         ...p,
         inventory: newInv,
+        growthRules: extra.subType === 'water-of-life' ? {version:3, waterOfLifePct:2, waterMigration:'current'} : p.growthRules,
         consumableCounts: counts,
         consumableBonus: bonus,
         currentHp: newHp,
@@ -8124,7 +8137,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
      }
 
      const baseExp = player.level * 500 + 2000;
-     const expGained = Math.round(baseExp * (0.9 + Math.random() * 0.2));
+     const expGained = Math.round(baseExp * (0.9 + Math.random() * 0.2) * 1.5);
 
      setPlayer((p) => {
        const prevDetail = p.companions.details[beastId];
@@ -8266,7 +8279,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
      // 基础奖励：修为 + 魂币
-     const baseExp = player.level * 80 + 500;
+     const baseExp = (player.level * 80 + 500) * 1.5;
      const expGained = Math.round(baseExp * (0.8 + Math.random() * 0.4));
      const coinGained = Math.round(20 + player.level * 2 + Math.random() * 30);
 
@@ -8871,40 +8884,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   /** 百级突破（每10级消耗一个法则，突破后等级上限+10） */
   const godBreakthrough = (lawType: string): { success: boolean; reason?: string } => {
-    if (!player) return { success: false, reason: '玩家不存在' };
-    const dt = player.divineTrial;
-    if (!dt?.godLevelProgress?.unlocked) return { success: false, reason: '尚未解锁神级修炼' };
-
-    const lvl = player.level;
-    // 突破等级要求：109/119/129/139/149/159/169级瓶颈（即9结尾的百级以上等级）
-    if (lvl < 100 || lvl % 10 !== 9) return { success: false, reason: '仅109/119/…瓶颈等级可突破' };
-    if (lvl >= dt.godLevelProgress.levelCap) return { success: false, reason: '已达当前神位等级上限' };
-    if (player.exp < getMaxExp(lvl)) return { success: false, reason: '经验未满' };
-
-    const fused = dt.lawsFused;
-    if (!(fused as any)[lawType]) return { success: false, reason: '尚未融合该法则' };
-    if (dt.lawsConsumedForBreakthrough.includes(lawType)) {
-      return { success: false, reason: '该法则已用于突破' };
-    }
-    // 混沌法则不能用于常规突破
-    if (lawType === 'chaos') return { success: false, reason: '混沌法则不用于突破' };
-
-    setPlayer((p) => {
-      const newLevel = p.level + 1;
-      const attrs = calcAttributes({ ...p, level: newLevel });
-      const consumed = [...p.divineTrial!.lawsConsumedForBreakthrough, lawType];
-      const newCap = p.divineTrial!.godLevelProgress.levelCap;
-      // 升级，同时突破瓶颈
-      return {
-        ...p,
-        level: newLevel,
-        currentHp: attrs.hp,
-        divineTrial: {
-          ...p.divineTrial!,
-          lawsConsumedForBreakthrough: consumed,
-          godLevelProgress: { ...p.divineTrial!.godLevelProgress, levelCap: newCap },
-        },
-      };
+    const required = player ? getMaxExp(player.level, player.easterRealmStage) : 0;
+    const reason = godBreakthroughError(player, lawType, required);
+    if (reason) return { success: false, reason };
+    const expectedLevel = player!.level;
+    setPlayer(p => {
+      const next = applyGodBreakthrough(p, lawType, getMaxExp(p.level, p.easterRealmStage), expectedLevel);
+      if (next === p) return p;
+      return { ...next, currentHp: calcAttributes(next).hp };
     });
     return { success: true };
   };
@@ -11582,7 +11569,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       while (true) {
         const maxExp = getMaxExp(curLevel);
         if (curExp < maxExp) break;
-        if (isBottleneck(curLevel)) {
+        if (isBottleneck(curLevel, p.brokenBottlenecks)) {
           curExp = maxExp;
           break;
         }

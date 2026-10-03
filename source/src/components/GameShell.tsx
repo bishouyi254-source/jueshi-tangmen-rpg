@@ -1,3 +1,4 @@
+import { shadowVictoryExp } from '@/lib/growthBatch3';
 import { formatNumber } from '@/lib/utils';
 import DragonLegendPanel from '@/pages/Game/DragonLegendPanel';
 import {__localBuildShadow} from '@/lib/shadow';
@@ -446,7 +447,7 @@ export default function GameShell() {
       case 'laws': return <LawPanel onClose={() => handleDesktopNav('character')} />;
       case 'companions': return <CompanionsPanel onBack={() => handleDesktopNav('character')} />;
       case 'shop': return <InventoryPanel />;
-      case 'reincarnationShadow': return <ReincarnationShadowPanel onClose={()=>handleDesktopNav('character')} onStartBattle={orb=>{const cfg=__localBuildShadow(orb);cfg.meta.shadowOrb=orb;cfg.meta.expReward=Math.max(1000,orb.level**2*20);cfg.meta.coinReward=Math.max(500,orb.level*500);startBattle(cfg);}}/>;
+      case 'reincarnationShadow': return <ReincarnationShadowPanel onClose={()=>handleDesktopNav('character')} onStartBattle={orb=>{const cfg=__localBuildShadow(orb);cfg.meta.shadowOrb=orb;cfg.meta.expReward=shadowVictoryExp(orb.level);cfg.meta.coinReward=Math.max(500,orb.level*500);startBattle(cfg);}}/>;
       case 'more':
         if (moreSub === 'settings') return <SettingsPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'craft') return <CraftPanel onBack={() => setMoreSub(null)} />;
@@ -463,7 +464,7 @@ export default function GameShell() {
              <ReincarnationShadowPanel
                onClose={() => setMoreSub(null)}
                onStartBattle={(orb) => {
-                 const cfg=__localBuildShadow(orb);cfg.meta.shadowOrb=orb;cfg.meta.expReward=Math.max(1000,orb.level**2*20);cfg.meta.coinReward=Math.max(500,orb.level*500);startBattle(cfg);
+                 const cfg=__localBuildShadow(orb);cfg.meta.shadowOrb=orb;cfg.meta.expReward=shadowVictoryExp(orb.level);cfg.meta.coinReward=Math.max(500,orb.level*500);startBattle(cfg);
                  setMoreSub(null);
                }}
              />
