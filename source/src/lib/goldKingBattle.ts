@@ -1,7 +1,8 @@
 import {goldSkill,goldEvolutions} from './goldKing';
+import {goldMeleeExtra,type GoldBattle} from './goldDominance';
 import {__fbClone,__fbAdd,__fbShield,__fbHeal,__fbDirect} from './fierceEffects';
 export function goldSkillReady(p:any,battle:any,slot:number,soul=0){const s=goldSkill(p,slot,soul);return !s?'无效金龙王魂技':(battle?.cooldowns?.[s.key]||0)>(battle?.turn||0)?'魂技冷却中':'';}
-export function applyGoldKingSkill(p:any,state:any,battle:any,slot:number,soul:number,damage:number,rng=Math.random){
+export function applyGoldKingSkill(p:any,state:any,battle:any,slot:number,soul:number,damage:number,rng=Math.random,context?:{goldBattle?:GoldBattle;defense:number}){
  const skill=goldSkill(p,slot,soul),reason=goldSkillReady(p,battle,slot,soul);if(reason||!skill)return {reason,next:state,battle,logs:[],damage:0};
  const next=__fbClone(state),logs:string[]=[],actor=next.actors.player,enemy=next.actors.enemy;
  if(actor.hp<=0||enemy.hp<=0)return {reason:'战斗已结束',next:state,battle,logs:[],damage:0};
@@ -18,7 +19,7 @@ export function applyGoldKingSkill(p:any,state:any,battle:any,slot:number,soul:n
   if(slot===6)direct=false;
  }else{mul=slot===0?1.15:slot===2?1.25:slot===4?1.2:slot===5?1.3:slot===7?1.4:slot===8?1.5:1;if(slot===0)cleanse('player');if(slot===5)cleanse('enemy',false);}
  let lost=0;
- if(direct){const hit=__fbDirect(next,'enemy',Math.max(1,Math.round(damage*mul)),{attacker:'player',direct:true});Object.assign(next,hit.next);logs.push(...hit.logs);lost=hit.lost;}
+ if(direct){const base=damage*mul,extra=skill.melee?goldMeleeExtra(context?.goldBattle,base,context?.defense||0):0;const hit=__fbDirect(next,'enemy',Math.max(1,Math.round(base+extra)),{attacker:'player',direct:true});Object.assign(next,hit.next);logs.push(...hit.logs);if(extra>0)logs.push('金龙霸血：本次近战附加 '+Math.round(extra)+' 点伤害（减伤前结算）。');lost=hit.lost;}
  if(next.actors.player.hp>0){
   if((!skill.forbidden&&slot===8)||(skill.forbidden&&slot===8))effect('player','goldRisk','vulnerable',.1,1,true);
   if(skill.forbidden&&slot===2)__fbHeal(next,'player',Math.min(lost*.2,next.actors.player.maxHp*.03),logs,'吸血');

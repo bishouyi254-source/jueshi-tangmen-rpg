@@ -1,4 +1,5 @@
 import {normalizeGoldKing} from './goldKing';
+import {normalizeGoldBlood,readGoldBlood,goldBloodBonuses,createGoldBattle,settleGoldBlood} from './goldDominance';
 import {bloodlineProgress,valleyProgress,bloodlineBonuses,valleyAction,reincarnateBloodline,reincarnateValley} from './dragonBloodline';
 import {abyssProgress,abyssAction,reincarnateAbyss} from './abyssFrontier';
 import { STAMINA_CAP, godLevelExp, freshGrowthRules, migrateGrowthRules, godBreakthroughError, applyGodBreakthrough, type GrowthRules } from '@/lib/growthBatch3';
@@ -705,6 +706,7 @@ function getDomainMultiplier(level: number): number {
 
 // 玩家数据
 export interface IPlayer {
+  goldBlood?: ReturnType<typeof readGoldBlood>;
   dragonBloodline?: import('./dragonBloodline').BloodlineProgress;
   dragonValley?: import('./dragonBloodline').ValleyProgress;
   dragonLegend?: import('./dragonLegend').DragonProgress;
@@ -2305,7 +2307,7 @@ export function calcAttributes(player: IPlayer): IAttrs {
       allAttrPct = Math.max(-0.9, allAttrPct - 0.8); // 下界保护：虚弱状态最多-80%
    }
 
-    const bloodBonus=bloodlineBonuses(player);attack*=1+bloodBonus.attack;hp*=1+bloodBonus.hp;defense*=1+bloodBonus.defense;speed*=1+bloodBonus.speed;maxSoulPower=Math.max(1,Math.round(maxSoulPower*(1+bloodBonus.mana)));
+    const bloodBonus=bloodlineBonuses(player),goldBloodBonus=goldBloodBonuses(player);attack*=1+bloodBonus.attack+goldBloodBonus.attack;hp*=1+bloodBonus.hp+goldBloodBonus.hp;defense*=1+bloodBonus.defense;speed*=1+bloodBonus.speed;maxSoulPower=Math.max(1,Math.round(maxSoulPower*(1+bloodBonus.mana)));
     const armorBonus=armorBonuses(player);
     attack*=1+armorBonus.attack;defense*=1+armorBonus.defense;speed*=1+armorBonus.speed;spirit*=1+armorBonus.spirit;hp*=1+armorBonus.hp;
     // 取最终常驻精神，转换一次；不重新进入属性倍率计算。
@@ -3986,7 +3988,7 @@ const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [player, rawSetPlayerState] = useState<IPlayer | null>(null);
-  const setPlayerState=useCallback((update:any)=>rawSetPlayerState(prev=>normalizeGoldKing(typeof update==='function'?update(prev):update)),[]);
+  const setPlayerState=useCallback((update:any)=>rawSetPlayerState(prev=>normalizeGoldBlood(normalizeGoldKing(typeof update==='function'?update(prev):update))),[]);
   const [hasSave, setHasSave] = useState(false);
   const [loading, setLoading] = useState(true);
   const [inBattle, setInBattle] = useState(false);
@@ -6075,7 +6077,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ...baseP,
           dragonLegend: reincarnateDragon(player),
           abyssFrontier: reincarnateAbyss(player),
-          dragonBloodline: reincarnateBloodline(player),dragonValley:reincarnateValley(player),
+          dragonBloodline: reincarnateBloodline(player),dragonValley:reincarnateValley(player),goldBlood:readGoldBlood(player.goldBlood),
           name: finalName,
           direction: player.direction,
           isTwinSoul: isTwinAfterReroll,
@@ -11137,7 +11139,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       logs: [],
       updatedAt: Date.now(),
       exploreSource: config.exploreSource,
-      meta: { ...config.meta, liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()) },
+      meta: { ...config.meta, liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()),goldBattle:createGoldBattle(player,config,player?calcAttributes(player).hp:1,crypto.randomUUID()) },
     });
     setInBattle(true);
   };
@@ -11154,6 +11156,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setInBattle(false);
     // 战斗结束后立即回满血
     setPlayer((p) => {
+      p=settleGoldBlood(p,battleState?.meta?.goldBattle,bPhase||'');
       const attrs = calcAttributes(p);
       let np = ascensionId ? dragonAction(p,{type:"leave",id:ascensionId}).player : { ...p };
       if(abyssId)np=abyssAction(np,{type:"leave",id:abyssId}).player;
@@ -11727,7 +11730,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }), [player, attributes, hasSave, loading, exploration, battleState, lastBattleResult, inBattle, clearNewAchievements, unlockedAchievementIds, getAchievementProgress, sweepExplore, getSweepCount, incrementSweepCount, getReincarnationShadow, hasShadowChallengedToday, startShadowChallenge, claimShadowVictory]);
 
   const localBattleLoaded=useRef(false);
-  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&(x.battle.enemy?.hp>0 || x.battle.phase==='victory')){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension||(battleState?.meta as any)?.abyss||(battleState?.meta as any)?.valley||(battleState?.meta as any)?.bloodBattle||(battleState?.meta as any)?.armorDomain?.used||(battleState?.meta as any)?.liehunGrowth))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
+  useEffect(()=>{if(!player)return;const key='__local_fierce_battle_v1_'+(window.appId||'local');const owner=player.name+'|'+(player.reincarnationCount||0)+'|'+player.martialSoul?.name;try{if(!localBattleLoaded.current){localBattleLoaded.current=true;const raw=localStorage.getItem(key);if(raw&&!inBattle&&!battleState){const x=JSON.parse(raw);if(x.owner===owner&&['playerTurn','enemyTurn','victory','defeat','flee'].includes(x.battle?.phase)&&(x.battle.enemy?.hp>0 || x.battle.phase==='victory')){setBattleState(x.battle);setInBattle(true);return;}}}if(inBattle&&(battleState?.battleType==='fierce-beast'||(battleState?.meta as any)?.ascension||(battleState?.meta as any)?.abyss||(battleState?.meta as any)?.valley||(battleState?.meta as any)?.bloodBattle||(battleState?.meta as any)?.goldBattle||(battleState?.meta as any)?.armorDomain?.used||(battleState?.meta as any)?.liehunGrowth))localStorage.setItem(key,JSON.stringify({owner,battle:battleState}));else localStorage.removeItem(key);}catch{}},[player?.name,inBattle,battleState]);
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 

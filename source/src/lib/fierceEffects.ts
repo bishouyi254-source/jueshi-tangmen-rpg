@@ -693,7 +693,8 @@ function __fbDamage(s,target,amount,options={},logs=[]) {
   if(!a||a.hp<=0||amount<=0)return {lost:0,absorbed:0,reflected:0};
   let damage=Math.max(0,Math.round(amount));
   if(options.direct!==false&&!options.raw)damage=Math.round(damage*(1-Math.min(.9,__fbValue(a,'goldDirectReduction'))));
-  if(!options.raw){damage=Math.round(damage*(1+__fbValue(a,'vulnerable'))*(1-Math.min(.9,__fbValue(a,'reduction'))));}
+  if(options.direct!==false&&!options.raw&&attacker)damage=Math.round(damage*(1+__fbValue(attacker,'directDamageUp')));
+  if(!options.raw){const vulnerable=Math.max(__fbValue(a,'vulnerable'),options.direct!==false?__fbValue(a,'goldDirectVulnerable'):0);damage=Math.round(damage*(1+vulnerable)*(1-Math.min(.9,__fbValue(a,'reduction'))));}
   if(Number.isFinite(options.cap))damage=Math.min(damage,Math.max(0,options.cap));
   if(options.direct!==false&&!options.raw&&attacker?.effects?.goldCounter&&attacker.goldCounterCharge>0&&attacker.hp>0){damage+=Math.min(Math.round(damage*.5),attacker.goldCounterCharge);attacker.goldCounterCharge=0;logs.push('金龙霸体：承受来力转为反击。');}
   const absorbed=Math.min(a.shield,damage);a.shield-=absorbed;damage-=absorbed;
@@ -725,7 +726,7 @@ function __fbBegin(s,key,logs=[]) {
 function __fbFinish(s,key) {
   const a=s.actors[key];if(!a)return;
   if(!a.effects.goldCounter)a.goldCounterCharge=0;
-  for(const [id,e] of Object.entries(a.effects))if(e.type!=='goldDirectReduction'&&e.born<a.action&&--e.turns<=0)delete a.effects[id];
+  for(const [id,e] of Object.entries(a.effects))if(!e.manual&&e.type!=='goldDirectReduction'&&e.born<a.action&&--e.turns<=0)delete a.effects[id];
 }
 function __fbDirect(s,target,damage,options={}) {
   const next=__fbClone(s),logs=[],result=__fbDamage(next,target,damage,options,logs);

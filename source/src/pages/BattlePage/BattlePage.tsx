@@ -1,5 +1,6 @@
 import {hasGoldKing,goldSkill,goldEvolutions} from '@/lib/goldKing';
 import {applyGoldKingSkill,goldSkillReady,applyBloodTransform} from '@/lib/goldKingBattle';
+import {readGoldBattle,readGoldBlood,settleGoldBlood,goldMeleeExtra,goldPenetration,syncGoldDomain} from '@/lib/goldDominance';
 import {valleyAction,bloodlineProgress,bloodlineBonuses,BLOOD_SKILLS,readBloodBattle,bloodSkillAction} from '@/lib/dragonBloodline';
 import {__fbAdd,__fbShield} from '@/lib/fierceEffects';
 import {abyssAction,abyssProgress,abyssReward} from '@/lib/abyssFrontier';
@@ -413,7 +414,13 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   const bloodEnemyRef=useRef(battleState?.enemy?.id);
   if(bloodEnemyRef.current!==battleState?.enemy?.id){bloodEnemyRef.current=battleState?.enemy?.id;bloodRef.current=readBloodBattle(battleState?.meta?.bloodBattle);}
   function __bloodCommit(state){bloodRef.current=state;setBattleState(prev=>prev?({...prev,meta:{...prev.meta,bloodBattle:state}}):prev);}
-  function __bloodFinish(){if(hasGoldKing(player)){__bloodCommit({...bloodRef.current,turn:bloodRef.current.turn+1});const regen=bloodlineBonuses(player).manaRegen;if(regen&&playerHpRef.current>0)setCurrentSoulPower(v=>Math.min(attrs.maxSoulPower,v+Math.floor(attrs.maxSoulPower*regen)));}}
+  const goldBattleRef=useRef(readGoldBattle(battleState?.meta?.goldBattle));
+  const goldBattleIdRef=useRef(battleState?.meta?.goldBattle?.id);
+  const goldAnnouncedRef=useRef('');
+  if(goldBattleIdRef.current!==battleState?.meta?.goldBattle?.id){goldBattleIdRef.current=battleState?.meta?.goldBattle?.id;goldBattleRef.current=readGoldBattle(battleState?.meta?.goldBattle);}
+  function __goldCommit(next){goldBattleRef.current=next;setBattleState(prev=>prev?.meta?.goldBattle?.id===next?.id?{...prev,meta:{...prev.meta,goldBattle:next}}:prev);}
+  function __goldFinish(){const old=goldBattleRef.current;if(!old?.turns)return;const next={...old,turns:old.turns-1};__goldCommit(next);const fx=__fbGet();if(fx){syncGoldDomain(fx,next);__fbCommit(fx);}if(!next.turns)addLog('金龙镇狱领域：3次行动已完成，领域结束。','system');}
+  function __bloodFinish(){if(hasGoldKing(player)){__goldFinish();__bloodCommit({...bloodRef.current,turn:bloodRef.current.turn+1});const regen=bloodlineBonuses(player).manaRegen;if(regen&&playerHpRef.current>0)setCurrentSoulPower(v=>Math.min(attrs.maxSoulPower,v+Math.floor(attrs.maxSoulPower*regen)));}}
   const armorDomainRef=useRef(readArmorDomain(battleState?.meta?.armorDomain));
   const armorDomainEnemyRef=useRef(battleState?.enemy?.id);
   if(armorDomainEnemyRef.current!==battleState?.enemy?.id){armorDomainEnemyRef.current=battleState?.enemy?.id;armorDomainRef.current=readArmorDomain(battleState?.meta?.armorDomain);}
@@ -623,6 +630,12 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     if(!ledger.settled){liehunRef.current={...ledger,settled:true};setBattleState(prev=>prev?{...prev,meta:{...prev.meta,liehunGrowth:liehunRef.current}}:prev);}
   }
   useEffect(()=>{if(phase==='victory' && battleInitRef.current)settleDirectGrowth();},[phase,battleState?.meta?.liehunGrowth?.id]);
+  useEffect(()=>{const old=goldBattleRef.current;if(!battleInitRef.current||!old||!['victory','defeat','flee'].includes(phase)||old.settled)return;
+    const progress=readGoldBlood(player?.goldBlood),gain=phase==='victory'&&!progress.claimed.includes(old.id)?Math.min(old.reward,2000-progress.points):0;
+    if(phase==='victory')setPlayer(p=>settleGoldBlood(p,old,'victory'));
+    __goldCommit({...old,turns:0,settled:true});const fx=__fbRef.current;if(fx){syncGoldDomain(fx,goldBattleRef.current);__fbCommit(fx);}
+    if(phase==='victory')addLog(gain>0?'金龙霸血：霸血 +'+gain+'（每100点：气血+1%、攻击+0.5%；上限2000）。':old.reward?'金龙霸血：已达成长上限或本场已结算。':'金龙霸血：本场不提供成长，'+old.reason+'。','system');
+  },[phase,battleState?.meta?.goldBattle?.id]);
   useEffect(() => { enemyHpRef.current = enemyHp; }, [enemyHp]);
   useEffect(() => { enemyMaxHpRef.current = enemyMaxHp; }, [enemyMaxHp]);
   useEffect(() => { playerHpRef.current = playerHp; }, [playerHp]);
@@ -639,7 +652,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     try {
       setBattleState(prev=>prev&&prev.enemy?.id===battleState.enemy.id?{
         ...prev,
-        meta:{...prev.meta,liehunGrowth:liehunRef.current,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
+        meta:{...prev.meta,goldBattle:goldBattleRef.current,liehunGrowth:liehunRef.current,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
         enemy: {
           ...battleState.enemy,
           hp: enemyHpRef.current,
@@ -961,7 +974,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
        playerSoulPower: currentSoulPower,
        updatedAt: now,
        exploreSource: battleState?.exploreSource,
-       meta: {...prev?.meta,liehunGrowth:liehunRef.current,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
+       meta: {...prev?.meta,goldBattle:goldBattleRef.current,liehunGrowth:liehunRef.current,...(__fbRef.current?{fierceEffects:__fbRef.current}:{})},
      }:prev);
    }, [phase, enemyHp, enemyMaxHp, rewards, enemy, battleType, locationId, setBattleState, playerHp, currentSoulPower]);
 
@@ -1177,6 +1190,7 @@ function __fbGet() {
   const s=__fbRef.current;s.actors.enemy.hp=enemyHpRef.current;s.actors.player.hp=playerHpRef.current;s.actors.player.mana=soulPowerRef.current;
   s.actors.player.maxHp=Math.max(1,Math.round(attrs.hp*domainEff.hpMul));
   for(const spirit of battleSpiritsRef.current){const key='spirit:'+spirit.id;if(!s.actors[key])s.actors[key]=__fbCreate('',spirit,spirit).actors.player;s.actors[key].hp=spirit.hp;}
+  syncGoldDomain(s,hasGoldKing(player)?goldBattleRef.current:undefined);
   return s;
 }
 function __fbCommit(s,logs=[]) {
@@ -1195,11 +1209,14 @@ function setPlayerHp(value) {
   playerHpRef.current=next;__fbRawPlayerHp(next);
 }
 function setCurrentSoulPower(value) {const next=typeof value==='function'?value(soulPowerRef.current):value;soulPowerRef.current=next;__fbRawMana(next);}
-function __fbHitEnemy(damage,attacker='player',instant=false) {
+function __fbHitEnemy(damage,attacker='player',instant=false,melee=false) {
   const s=__fbGet();
   if(!s){const lost=Math.min(Math.max(0,enemyHpRef.current),Math.max(0,damage));enemyHpRef.current-=lost;setEnemyHp(enemyHpRef.current);recordDirectDamage(lost,attacker);return lost;}
   const actor=s.actors[attacker];const boost=actor?Math.max(0,...Object.values(actor.effects).filter((e:any)=>e.type==='attackUp').map((e:any)=>e.value||0)):0;
-  const adjusted=instant?damage:Math.round(damage*(1+boost)*(Math.max(0,enemy.defense)+500)/(__fbDefense(s,'enemy',enemy.defense)+500));
+  const effectiveDefense=__fbDefense(s,'enemy',enemy.defense,attacker==='player'?goldPenetration(goldBattleRef.current):0);
+  const base=instant?damage:damage*(1+boost)*(Math.max(0,enemy.defense)+500)/(effectiveDefense+500);
+  const extra=attacker==='player'&&melee&&!instant?goldMeleeExtra(goldBattleRef.current,base,effectiveDefense):0;
+  const adjusted=Math.round(base+extra);
   const hit=__fbDirect(s,'enemy',adjusted,{attacker,direct:true});
   __fbCommit(hit.next,hit.logs);
   if(hit.absorbed>0)addLog(`🛡️ ${enemy.name} 护盾吸收 ${hit.absorbed} 点伤害。`,'system');
@@ -1213,22 +1230,23 @@ function __useBloodSkill(id){
  if(id==='body')__fbShield(fx,'player',.04,logs);
  if(id==='dominion')__fbAdd(fx,'player',{id:'goldDominion',type:'goldDirectReduction',label:'金龙霸体',value:.2,turns:2,negative:false},logs);
  __fbCommit(fx,logs);
- if(r.skill.pct){const damage=Math.max(1,Math.round(attrs.attack*domainEff.atkMul*(1+r.skill.pct)*500/(Math.max(0,enemy.defense)+500)*armorDomainMultiplier(armorDomainRef.current,'skill')));__fbHitEnemy(damage);if(id==='roar'&&enemyHpRef.current>0&&Math.random()<.3){const n=__fbClone(__fbGet()),ls=[];__fbAdd(n,'enemy',{id:'goldStun',type:'stun',label:'黄金龙吼眩晕',turns:1,negative:true},ls);__fbCommit(n,ls);}}
+ if(r.skill.pct){const damage=Math.max(1,Math.round(attrs.attack*domainEff.atkMul*(1+r.skill.pct)*500/(Math.max(0,enemy.defense)+500)*armorDomainMultiplier(armorDomainRef.current,'skill')));__fbHitEnemy(damage,'player',false,id==='claw');if(id==='roar'&&enemyHpRef.current>0&&Math.random()<.3){const n=__fbClone(__fbGet()),ls=[];__fbAdd(n,'enemy',{id:'goldStun',type:'stun',label:'黄金龙吼眩晕',turns:1,negative:true},ls);__fbCommit(n,ls);}}
  addLog('释放'+r.skill.name+'，本次行动结束。','skill');scheduleEnemyAction(500);
 }
 function __useGoldKing(slot,soulIndex,ring,cost){
   const current=__fbGet();if(!current||goldSkillReady(player,bloodRef.current,slot,soulIndex)){toast.info('魂技冷却中');return;}actionLockRef.current=true;
-  const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=goldSkill(player,slot,soulIndex),bonus=bloodlineBonuses(player),pen=Math.min(.9,bonus.penetration+(skill.forbidden&&slot===4?.35:0));
+  const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=goldSkill(player,slot,soulIndex),bonus=bloodlineBonuses(player),pen=goldPenetration(goldBattleRef.current,bonus.penetration+(skill.forbidden&&slot===4?.35:0));
   const basePct=(ring.skillDamagePct||1.5)*(1+domainEff.skillDmgAdd+(attrs.coreGemBonus?.skillDmgPct||0)+bonus.skill);
   const result=calculateDamage(getEffectiveMainAttrForSoul(soul)*(1+(tempBuffs?.attack?.value||0)),__fbDefense(current,'enemy',enemy.defense)*(1-pen),true,attrs.critRate+domainEff.critAdd,attrs.critDmg+domainEff.critDmgAdd,basePct,soulIndex?secondTrueBodyTurns>0:trueBodyTurns>0,false,soul);
   const boost=Math.max(0,...Object.values(current.actors.player.effects).filter((e:any)=>e.type==='attackUp').map((e:any)=>e.value||0));
-  const r=applyGoldKingSkill(player,current,bloodRef.current,slot,soulIndex,result.damage*(1+boost));if(r.reason){actionLockRef.current=false;return;}r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit(r.battle);recordDirectDamage(r.damage,'player');lastHitSoulIndexRef.current=soulIndex;
+  const r=applyGoldKingSkill(player,current,bloodRef.current,slot,soulIndex,result.damage*(1+boost),Math.random,{goldBattle:goldBattleRef.current,defense:__fbDefense(current,'enemy',enemy.defense)*(1-pen)});if(r.reason){actionLockRef.current=false;return;}r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit(r.battle);recordDirectDamage(r.damage,'player');lastHitSoulIndexRef.current=soulIndex;
   if(r.damage)showDamagePopup('-'+fmtDmg(r.damage),result.isCrit,'enemy');addLog('释放第'+(slot+1)+'魂技「'+skill.name+'」'+(r.damage?'，伤害 '+formatNumber(r.damage):'，本次不追加攻击'),'skill');scheduleEnemyAction(600);
 }
 function __useBloodTransform(){if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;const cost=Math.ceil(attrs.maxSoulPower*.15),cd=bloodRef.current.cooldowns.transform||0;if(!goldEvolutions(player).state||cd>bloodRef.current.turn||soulPowerRef.current<cost)return;const current=__fbGet();if(!current)return;const r=applyBloodTransform(player,current);if(r.reason)return;actionLockRef.current=true;r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit({...bloodRef.current,cooldowns:{...bloodRef.current.cooldowns,transform:bloodRef.current.turn+7}});scheduleEnemyAction(500);}
 function __fbSilenced() {
   const s=__fbRef.current||battleState?.meta?.fierceEffects;return !!s&&Object.values(s.actors.player.effects).some(e=>e.type==='silence');
 }
+  useEffect(()=>{const b=goldBattleRef.current;if(!battleInitRef.current||!b||!hasGoldKing(player)||!['playerTurn','enemyTurn'].includes(phase)||goldAnnouncedRef.current===b.id)return;goldAnnouncedRef.current=b.id;const s=__fbGet();if(s)__fbCommit(s,b.turns?['金龙镇狱领域展开：力量压制、破甲、狂暴同时生效，剩余 '+b.turns+' 次行动。']:[]);},[phase,battleState?.meta?.goldBattle?.id]);
 function __fbSkillAllowed() {if(!__fbSilenced())return true;addLog('🔒 沉默中：不能释放魂技，仍可普通攻击。','system');return false;}
 function __fbFinishPlayer() {
   const s=__fbGet();if(!s||!s.playerOpen)return;
@@ -1560,7 +1578,7 @@ function __fbRestoreSpirits(spirits,saved) {
        atkWithGem = Math.round(atk * (1 + basicGemBonus));
      }
      const result = calculateDamage(atkWithGem, enemy.defense, false, critRate, critDmg);
-    const dmg = __fbHitEnemy(result.damage);
+    const dmg = __fbHitEnemy(result.damage,'player',false,playerMartialSoul?.name==='金龙王');
     
     lastHitSoulIndexRef.current = 0; // 普攻默认主修武魂
     showDamagePopup(`-${fmtDmg(dmg)}`, result.isCrit, 'enemy');
@@ -1874,6 +1892,7 @@ function __fbRestoreSpirits(spirits,saved) {
         'skill',
       );
      }
+     if(hasGoldKing(player)){scheduleEnemyAction(0);}
     } finally {
       actionLockRef.current = false;
     }
@@ -2899,6 +2918,7 @@ function __fbRestoreSpirits(spirits,saved) {
         </span>
       </header>
 
+         {goldBattleRef.current?.turns>0&&<div role="status" data-gold-prison-active style={{fontSize:12,padding:'6px 12px',color:'#fcd34d',background:'#10233a'}}>金龙镇狱领域 · 剩余 {goldBattleRef.current.turns} 次行动 · 力量压制／破甲／狂暴</div>}
          {(battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||hasGoldKing(player))&&__fbRef.current&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
          {battleState?.meta?.shadow&&<div role="status" className="px-3 py-2 text-purple-300">轮回领域已展开：全属性 +{battleState.meta.shadow.lifeIndex*10}%，魂技伤害 +{battleState.meta.shadow.lifeIndex}%</div>}
          {/* 战斗主区域 - flex-1 占满剩余空间 */}

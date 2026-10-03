@@ -27,7 +27,8 @@ export function goldSkill(p:any,slot:number,soulIndex=0){
  '游戏改编：6%气血护盾，并净化自身负面状态；本次不攻击。','游戏原创：伤害×1.5，释放后易伤10%，持续1次行动。'
  ][slot];
  const cooldown=(forbidden&&slot===1)?3:!forbidden&&slot===2?2:!forbidden&&slot===5?3:0;
- return {name,desc,slot,forbidden,skillType:forbidden?'attack':kinds[slot],cooldown,key:'gold:'+soulIndex+':'+slot};
+ const melee=forbidden?[0,1,2,3,4].includes(slot):[4,5].includes(slot);
+ return {name,desc:desc+(melee?' 金龙霸血：近战附加伤害随基础最大气血成长（不超过本次伤害20%）；力量成长不额外封顶。':''),melee,slot,forbidden,skillType:forbidden?'attack':kinds[slot],cooldown,key:'gold:'+soulIndex+':'+slot};
 }
 export function normalizeGoldKing(p:any){
  if(!p)return p;let out=p;
