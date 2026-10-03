@@ -3,6 +3,7 @@ import {getCultivationAttr} from '@/data/martialsouls';
 function __localBuildShadow(orb){
  if(!orb||!orb.attributes||!orb.martialSoul)throw Error('该前世记录缺少属性或武魂，无法生成影子');
  const attrs=JSON.parse(JSON.stringify(orb.attributes));
+ // Bloodline bonuses are already included in recorded attributes; never multiply again.
  for(const key of ['attack','defense','speed','spirit','hp'])if(!Number.isFinite(attrs[key])||attrs[key]<0||(key==='hp'&&attrs[key]===0))throw Error('前世属性记录不完整，无法挑战');
  const lifeIndex=Number(orb.index);
  if(!Number.isInteger(lifeIndex)||lifeIndex<1||lifeIndex>99)throw Error('前世世数无效');
@@ -21,7 +22,7 @@ function __localBuildShadow(orb){
  const critRate=Math.max(0,Math.min(1,Number.isFinite(attrs.critRate)?attrs.critRate:0));
  const critExtra=Math.max(0,(Number.isFinite(attrs.critDmg)?attrs.critDmg:1.5)-1.5);
  const mana=Math.max(0,Number.isFinite(attrs.maxSoulPower)?attrs.maxSoulPower:0);
- return {battleType:'challenge',locationId:'reincarnation-shadow',enemy:{id:`shadow-life-${orb.index}`,name:`轮回之影·${orb.name}（第${orb.index}世）`,years:orb.level||99,qualityColor:'gold',qualityLabel:`前世·${orb.realm||''}`,hp:attrs.hp,attack:attrs.attack,defense:attrs.defense,speed:attrs.speed,spirit:attrs.spirit,skillName:skills[0]?.name||'前世一击',skillDesc:`轮回领域：五维属性 +${lifeIndex*10}%，魂技伤害 +${lifeIndex}%；第九魂技65%，第一至第八各4.375%（魂力充足且魂技齐全时）`,element:orb.martialSoul.element,instantKillChance:0,hasOnlySkill:false},meta:{challengeType:'reincarnation-shadow',shadow:{lifeIndex,domain,attrs,skills,critRate,critExtra,mana,buffs:{},turn:0}}};
+ return {battleType:'challenge',locationId:'reincarnation-shadow',enemy:{id:`shadow-life-${orb.index}`,name:`轮回之影·${orb.name}（第${orb.index}世）`,years:orb.level||99,qualityColor:'gold',qualityLabel:`前世·${orb.realm||''}`,hp:attrs.hp,attack:attrs.attack,defense:attrs.defense,speed:attrs.speed,spirit:attrs.spirit,skillName:skills[0]?.name||'前世一击',skillDesc:`轮回领域：五维属性 +${lifeIndex*10}%，魂技伤害 +${lifeIndex}%；第九魂技65%，第一至第八各4.375%（魂力充足且魂技齐全时）`,element:orb.martialSoul.element,instantKillChance:0,hasOnlySkill:false},meta:{challengeType:'reincarnation-shadow',shadow:{bloodline:orb.dragonBloodline?JSON.parse(JSON.stringify(orb.dragonBloodline)):null,lifeIndex,domain,attrs,skills,critRate,critExtra,mana,buffs:{},turn:0}}};
 }
 function __localShadowAction(state,random=Math.random){
  const next={...state,buffs:{},turn:(state.turn||0)+1};

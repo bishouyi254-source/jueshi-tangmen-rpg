@@ -1,3 +1,4 @@
+import DragonValleyPanel from './DragonValleyPanel';
 import AbyssFrontierPanel from './AbyssFrontierPanel';
 import SweepSettings from './SweepSettings';
 import { formatNumber } from '@/lib/utils';
@@ -22,7 +23,7 @@ import SoulRing from '@/components/SoulRing';
 import TianmengSacrificeDialog from '@/components/TianmengSacrificeDialog';
 import { scopedStorage, logger } from '@lark-apaas/client-toolkit-lite';
 
-type MapView = 'abyssFrontier' | 'bigMap' | 'starForest' | 'starForestZone' | 'starForestDungeons' | 'sun-mountains' | 'mountain-dungeons' | 'exploration' | 'attribute-select' | 'shrekAcademy' | 'freshman' | 'freshTasks' | 'exam' | 'outerCourt' | 'arena' | 'innerCourt' | 'mentorship' | 'seaGodPavilion' | 'beiji' | 'beijiZone' | 'beijiDungeons' | 'beijiCore' | 'lifeLake' | 'spiritTower' | 'teaCity' | 'iceFireEye' | 'iceFireExplore';
+type MapView = 'dragonValley' | 'abyssFrontier' | 'bigMap' | 'starForest' | 'starForestZone' | 'starForestDungeons' | 'sun-mountains' | 'mountain-dungeons' | 'exploration' | 'attribute-select' | 'shrekAcademy' | 'freshman' | 'freshTasks' | 'exam' | 'outerCourt' | 'arena' | 'innerCourt' | 'mentorship' | 'seaGodPavilion' | 'beiji' | 'beijiZone' | 'beijiDungeons' | 'beijiCore' | 'lifeLake' | 'spiritTower' | 'teaCity' | 'iceFireEye' | 'iceFireExplore';
 
 interface IceFireDrop {
   type: 'immortal' | 'spirit' | 'coin' | 'soulbone';
@@ -451,8 +452,8 @@ export default function MapPanel() {
       sweepExplore, getSweepCount, incrementSweepCount,
     } = useGame();
 
-  const [view, setView] = useState<MapView>(lastBattleResult?.locationId==='abyss-frontier'&&player?.level>=99?'abyssFrontier':'bigMap');
-  useEffect(()=>{if(!inBattle&&lastBattleResult?.locationId==='abyss-frontier'&&player?.level>=99)setView('abyssFrontier');},[inBattle,lastBattleResult]);
+  const [view, setView] = useState<MapView>(lastBattleResult?.locationId==='dragon-valley'?'dragonValley':lastBattleResult?.locationId==='abyss-frontier'&&player?.level>=99?'abyssFrontier':'bigMap');
+  useEffect(()=>{if(!inBattle&&lastBattleResult?.locationId==='dragon-valley')setView('dragonValley');if(!inBattle&&lastBattleResult?.locationId==='abyss-frontier'&&player?.level>=99)setView('abyssFrontier');},[inBattle,lastBattleResult]);
   const [currentZone, setCurrentZone] = useState<ForestZone | null>(null);
   const [currentBeijiZone, setCurrentBeijiZone] = useState<BeijiZone | null>(null);
   const [currentMountain, setCurrentMountain] = useState<MountainZone | null>(null);
@@ -1899,6 +1900,7 @@ export default function MapPanel() {
   // === 渲染：大地图 ===
   if (!player) return null;
 
+  if(view==='dragonValley')return <DragonValleyPanel onBack={()=>setView('bigMap')}/>;
   if(view==='abyssFrontier')return <AbyssFrontierPanel onBack={()=>setView('bigMap')}/>;
   if (view === 'bigMap') {
      const coreRegions = [
@@ -1909,6 +1911,7 @@ export default function MapPanel() {
      ];
 
      const secretRegions = [
+       {id:'dragon-valley',name:'龙谷 · 龙魂遗迹',desc:'三大区域，探索龙魂遗迹与封印试炼',icon:Shield,locked:player.level<60,tag:'龙魂·探索',action:()=>setView('dragonValley'),lockedMsg:'需达到60级'},
        {id:'abyss-frontier',name:'血神军团 · 深渊前线',desc:'三章九关，赢取军功与神锻结晶',icon:Shield,locked:player.level<99,tag:'后期·斗铠',action:()=>setView('abyssFrontier'),lockedMsg:'需达到99级'},
        { id: 'spirit-tower', name: '传灵塔', desc: '传承魂灵的神秘之地，12属性副本', icon: Ghost, locked: (player?.level ?? 0) < 20, tag: '魂灵·契约', action: enterSpiritTower, lockedMsg: '需达到20级方可进入' },
        { id: 'tea-city', name: '茶城', desc: '茶香氤氲的邂逅之城，名士佳人云集', icon: Sparkles, locked: (player?.level ?? 0) < 60, tag: '邂逅·伴侣', action: enterTeaCity, lockedMsg: '需达到60级方可进入' },

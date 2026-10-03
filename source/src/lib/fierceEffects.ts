@@ -1,3 +1,4 @@
+import {VALLEY_NODES} from './dragonBloodline';
 import {ABYSS_NODES} from './abyssFrontier';
 // BEGIN FIERCE EFFECTS ENGINE v1
 // Pure battle rules. State is JSON serializable; no storage or React access.
@@ -691,6 +692,7 @@ function __fbDamage(s,target,amount,options={},logs=[]) {
   const a=s.actors[target],attacker=s.actors[options.attacker||'player'];
   if(!a||a.hp<=0||amount<=0)return {lost:0,absorbed:0,reflected:0};
   let damage=Math.max(0,Math.round(amount));
+  if(options.direct!==false&&!options.raw)damage=Math.round(damage*(1-Math.min(.9,__fbValue(a,'goldDirectReduction'))));
   if(!options.raw){damage=Math.round(damage*(1+__fbValue(a,'vulnerable'))*(1-Math.min(.9,__fbValue(a,'reduction'))));}
   if(Number.isFinite(options.cap))damage=Math.min(damage,Math.max(0,options.cap));
   const absorbed=Math.min(a.shield,damage);a.shield-=absorbed;damage-=absorbed;
@@ -706,6 +708,7 @@ function __fbDamage(s,target,amount,options={},logs=[]) {
 }
 function __fbBegin(s,key,logs=[]) {
   const a=s.actors[key];if(!a||a.hp<=0)return {skip:true,dead:true};
+  if(key==='enemy'){const e=s.actors.player?.effects?.goldDominion;if(e){if(e.turns<=0)delete s.actors.player.effects.goldDominion;else e.turns--;}}
   a.action++;
   const values=Object.values(a.effects),strongestDot=values.filter(e=>e.type==='dot').sort((a,b)=>b.value-a.value)[0],strongestHot=values.filter(e=>e.type==='hot').sort((a,b)=>b.value-a.value)[0];
   for(const e of values){
@@ -719,7 +722,7 @@ function __fbBegin(s,key,logs=[]) {
 }
 function __fbFinish(s,key) {
   const a=s.actors[key];if(!a)return;
-  for(const [id,e] of Object.entries(a.effects))if(e.born<a.action&&--e.turns<=0)delete a.effects[id];
+  for(const [id,e] of Object.entries(a.effects))if(e.type!=='goldDirectReduction'&&e.born<a.action&&--e.turns<=0)delete a.effects[id];
 }
 function __fbDirect(s,target,damage,options={}) {
   const next=__fbClone(s),logs=[],result=__fbDamage(next,target,damage,options,logs);
@@ -783,4 +786,5 @@ function __fbStatus(s) {
 // END FIERCE EFFECTS ENGINE
 
 for(const n of ABYSS_NODES)__FBProfiles[n.id]={id:n.id,name:n.name,skills:['深渊侵袭','暗潮秘术','深渊威压'],attr:n.attr,immortal:false,rules:n.rules};
-export {__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus};
+for(const n of VALLEY_NODES)__FBProfiles[n.id]={id:n.id,name:n.name,skills:['龙魂侵袭','遗迹秘术','龙威'],attr:n.attr,immortal:false,rules:n.rules};
+export {__fbAdd,__fbShield,__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus};

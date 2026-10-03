@@ -1,3 +1,5 @@
+import {valleyAction,bloodlineProgress,BLOOD_SKILLS,readBloodBattle,bloodSkillAction} from '@/lib/dragonBloodline';
+import {__fbAdd,__fbShield} from '@/lib/fierceEffects';
 import {abyssAction,abyssProgress,abyssReward} from '@/lib/abyssFrontier';
 import { recordLiehunHit, type LiehunLedger } from '@/lib/liehunGrowth';
 import {readArmorDomain,startArmorDomain,finishArmorDomainAction,armorDomainMultiplier,ARMOR_DOMAIN_NAMES,ARMOR_DOMAIN_EFFECTS,armorDomainDescription} from '@/lib/armorDomain';
@@ -179,7 +181,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   // 安全调度敌方回合（先清旧的再设新的，保证不会并发两个调度）
   // 流程：玩家行动 → 魂灵出手 → 敌人行动
   const scheduleEnemyAction = (delay: number, completePlayerAction=true) => {
-    __fbFinishPlayer();if(completePlayerAction)__armorFinishAction();clearEnemyTimer();
+    __fbFinishPlayer();if(completePlayerAction){__armorFinishAction();__bloodFinish();}clearEnemyTimer();
     if(battleEndedRef.current||enemyHpRef.current<=0||playerHpRef.current<=0)return;
     if(__fbGet()?.enemyActed){enemyTurnTimerRef.current=window.setTimeout(()=>__fbEnterPlayer(),getAnimDelay(600));return;}
     enemyTurnTimerRef.current = window.setTimeout(async () => {
@@ -405,6 +407,11 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   }, [activeTrueBodyIndex, playerSecondSoul, playerMartialSoul]);
   // 领域状态：是否开启（开启期间有额外加成+保护罩+魂力消耗2倍）
   const [domainActive, setDomainActive] = useState(false);
+  const bloodRef=useRef(readBloodBattle(battleState?.meta?.bloodBattle));
+  const bloodEnemyRef=useRef(battleState?.enemy?.id);
+  if(bloodEnemyRef.current!==battleState?.enemy?.id){bloodEnemyRef.current=battleState?.enemy?.id;bloodRef.current=readBloodBattle(battleState?.meta?.bloodBattle);}
+  function __bloodCommit(state){bloodRef.current=state;setBattleState(prev=>prev?({...prev,meta:{...prev.meta,bloodBattle:state}}):prev);}
+  function __bloodFinish(){if(bloodlineProgress(player).seals)__bloodCommit({...bloodRef.current,turn:bloodRef.current.turn+1});}
   const armorDomainRef=useRef(readArmorDomain(battleState?.meta?.armorDomain));
   const armorDomainEnemyRef=useRef(battleState?.enemy?.id);
   if(armorDomainEnemyRef.current!==battleState?.enemy?.id){armorDomainEnemyRef.current=battleState?.enemy?.id;armorDomainRef.current=readArmorDomain(battleState?.meta?.armorDomain);}
@@ -1155,7 +1162,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   // ============================================================
 // Injected inside the BattlePage component; bindings are its existing state/ref setters.
 function __fbGet() {
-  if((battleType!=='fierce-beast'&&!battleState?.meta?.abyss)||!__FBProfiles[enemy.id]||!attrs||!battleInitRef.current)return null;
+  if(!attrs||!battleInitRef.current||(!__FBProfiles[enemy.id]&&!bloodlineProgress(player).seals))return null;
   if(!__fbRef.current||__fbRef.current.beastId!==enemy.id){
     const saved=battleState?.meta?.fierceEffects;
     // The mount effect has initialized React state, but the HP mirror effects
@@ -1196,6 +1203,16 @@ function __fbHitEnemy(damage,attacker='player',instant=false) {
   recordDirectDamage(hit.lost,attacker);
   return hit.lost;
 }
+function __useBloodSkill(id){
+ if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;
+ const r=bloodSkillAction(player,bloodRef.current,id,soulPowerRef.current,attrs.maxSoulPower);if(r.reason){toast.info(r.reason);return;}const current=__fbGet();if(!current)return;actionLockRef.current=true;setCurrentSoulPower(v=>v-r.cost);__bloodCommit(r.state);
+ const fx=__fbClone(__fbGet()),logs=[];
+ if(id==='body')__fbShield(fx,'player',.04,logs);
+ if(id==='dominion')__fbAdd(fx,'player',{id:'goldDominion',type:'goldDirectReduction',label:'金龙霸体',value:.2,turns:2,negative:false},logs);
+ __fbCommit(fx,logs);
+ if(r.skill.pct){const damage=Math.max(1,Math.round(attrs.attack*domainEff.atkMul*(1+r.skill.pct)*500/(Math.max(0,enemy.defense)+500)*armorDomainMultiplier(armorDomainRef.current,'skill')));__fbHitEnemy(damage);if(id==='roar'&&enemyHpRef.current>0&&Math.random()<.3){const n=__fbClone(__fbGet()),ls=[];__fbAdd(n,'enemy',{id:'goldStun',type:'stun',label:'黄金龙吼眩晕',turns:1,negative:true},ls);__fbCommit(n,ls);}}
+ addLog('释放'+r.skill.name+'，本次行动结束。','skill');scheduleEnemyAction(500);
+}
 function __fbSilenced() {
   const s=__fbRef.current||battleState?.meta?.fierceEffects;return !!s&&Object.values(s.actors.player.effects).some(e=>e.type==='silence');
 }
@@ -1222,6 +1239,7 @@ function __fbSpiritTurn(spirit) {
 }
 function __fbEnemyTurn() {
   const s=__fbGet();if(!s)return false;
+  if(!__FBProfiles[enemy.id]){const copy=__fbClone(s),logs=[],r=__fbBegin(copy,'enemy',logs);__fbFinish(copy,'enemy');__fbCommit(copy,logs);return r.skip||r.dead;}
   if(battleEndedRef.current||s.actors.enemy.hp<=0||s.actors.player.hp<=0)return true;
   const spirits=battleSpiritsRef.current.filter(a=>!a.dead&&a.hp>0);
   const target=spirits.length?'spirit:'+spirits[Math.floor(Math.random()*spirits.length)].id:'player';
@@ -1241,7 +1259,7 @@ function __fbRestoreSpirits(spirits,saved) {
   return saved?.version===1?spirits.map(a=>{const x=saved.actors?.['spirit:'+a.id];return x?{...a,hp:Math.max(0,Math.min(a.maxHp,x.hp)),dead:x.hp<=0}:a;}):spirits;
 }
 
-  useEffect(()=>{if((battleType==='fierce-beast'||battleState?.meta?.abyss)&&phase==='playerTurn'&&battleInitRef.current&&!battleEndedRef.current)__fbEnterPlayer();},[phase]);
+  useEffect(()=>{if((battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||bloodlineProgress(player).seals)&&phase==='playerTurn'&&battleInitRef.current&&!battleEndedRef.current)__fbEnterPlayer();},[phase]);
   const spiritAttack = useCallback((): Promise<number> => {
     return new Promise((resolve) => {
       const aliveSpirits = battleSpirits.filter((s) => !s.dead && s.hp > 0);
@@ -1417,7 +1435,7 @@ function __fbRestoreSpirits(spirits,saved) {
       }
        showDamagePopup(`-${fmtDmg(dmg)}`, result.isCrit, 'player');
        // 扣血（击杀由 useEffect 统一检测）
-       setPlayerHp((hp) => Math.max(0, hp - dmg));
+       if(__fbGet()&&!__FBProfiles[enemy.id]){const hit=__fbDirect(__fbGet(),'player',dmg,{attacker:'enemy',direct:true});__fbCommit(hit.next,hit.logs);}else setPlayerHp((hp) => Math.max(0, hp - dmg));
        // 🔴 魂导核心绿宝石：受到攻击后回复 hpRegenPct 最大血量（累加每个魂导器上的绿宝石 +5%）
        const hpRegenPct = attrs.coreGemBonus?.hpRegenPct ?? 0;
        if (hpRegenPct > 0) {
@@ -2143,6 +2161,7 @@ function __fbRestoreSpirits(spirits,saved) {
         clearTimeout(secondDomainAnimTimerRef.current);
         secondDomainAnimTimerRef.current = null;
       }
+       if(battleState?.meta?.valley){const t=battleState.meta.valley,r=valleyAction(player,{type:'win',id:t.id});setPlayer(p=>valleyAction(p,{type:'win',id:t.id}).player);addLog(r.reason||r.message,'system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
        if(battleState?.meta?.abyss){const t=battleState.meta.abyss;const result=abyssAction(player,{type:'win',id:t.id});setPlayer(p=>abyssAction(p,{type:'win',id:t.id}).player);addLog(result.message||'深渊战斗已结算','system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
        if((battleState?.meta as any)?.ascension){const trial=(battleState.meta as any).ascension;setPlayer(p=>dragonAction(p,{type:'win',id:trial.id}).player);addLog('升灵台试炼成功，灵力 +'+trial.reward,'system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
        if(battleState?.meta?.shadow){setRewards({items:[],soulBones:[],ring:null,exp:battleState.meta.expReward||0,coins:battleState.meta.coinReward||0});setVictoryStep('summary');setPhase('victory');return;}
@@ -2865,7 +2884,7 @@ function __fbRestoreSpirits(spirits,saved) {
         </span>
       </header>
 
-         {(battleType==='fierce-beast'||battleState?.meta?.abyss)&&__FBProfiles[enemy.id]&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
+         {(battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||bloodlineProgress(player).seals)&&__fbRef.current&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
          {battleState?.meta?.shadow&&<div role="status" className="px-3 py-2 text-purple-300">轮回领域已展开：全属性 +{battleState.meta.shadow.lifeIndex*10}%，魂技伤害 +{battleState.meta.shadow.lifeIndex}%</div>}
          {/* 战斗主区域 - flex-1 占满剩余空间 */}
          <div className="flex-1 flex flex-col px-2 md:px-8 py-2 md:py-6 gap-2 md:gap-8 relative overflow-hidden min-h-0 w-full max-w-6xl mx-auto">
@@ -3904,6 +3923,7 @@ function __fbRestoreSpirits(spirits,saved) {
                 setBattleState(prev=>prev?({...prev,meta:{...prev.meta,armorUsed:true}} as any):prev);
                 addLog('斗铠振奋：恢复最大气血3%，本次行动结束。','skill');scheduleEnemyAction(600);
               }}>斗铠振奋 · 每场一次 · 魂力 {Math.ceil(attrs.maxSoulPower*.1)}</button>}
+            {bloodlineProgress(player).seals>=3&&<div className="mb-2 rounded-xl border border-yellow-500/30 p-3 text-yellow-200" data-blood-skills><div className="text-xs mb-2">血脉技能 · 每次释放占用一次行动</div><div className="grid grid-cols-2 gap-2">{BLOOD_SKILLS.filter(k=>bloodlineProgress(player).seals>=k.seal).map(k=>{const r=bloodSkillAction(player,bloodRef.current,k.id,currentSoulPower,attrs.maxSoulPower);return <button key={k.id} className="rounded-lg p-2 border border-yellow-500/30 disabled:opacity-40" disabled={phase!=='playerTurn'||!!r.reason||skillBanTurns>0} onClick={()=>__useBloodSkill(k.id)}>{k.name} · 魂力 {r.cost}{r.reason?' · '+r.reason:''}</button>})}</div></div>}
             {/* 操作按钮行：固定4列对称布局 — 普攻 / 领域 / 二领域 / 逃跑 */}
             <div className="grid grid-cols-4 gap-2 md:gap-3 w-full">
                <ActionButton
