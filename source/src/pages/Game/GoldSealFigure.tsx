@@ -1,0 +1,9 @@
+const anchors=Array.from({length:18},(_,i)=>{
+ const a=-Math.PI/2+i*Math.PI/9,dx=Math.cos(a),dy=Math.sin(a),scale=488/Math.max(Math.abs(dx),Math.abs(dy));
+ const x=500+dx*scale,y=500+dy*scale,tx=500+dx*260,ty=500+dy*300,length=Math.hypot(tx-x,ty-y);
+ return {x,y,tx,ty,length,angle:Math.atan2(ty-y,tx-x)*180/Math.PI};
+});
+export default function GoldSealFigure({seals}:{seals:number}){
+ const asset=((window as any).__BASENAME__||'').replace(/\/$/,'')+'/assets/gold-king-transparent-v1.webp';
+ return <figure className="gold-seal-art" data-gold-seal-art><div className="gold-seal-scene"><img src={asset} alt="透明背景的金龙，十八条游戏风格锁链连接展示框边缘" width={1254} height={1254} decoding="async"/><svg viewBox="0 0 1000 1000" aria-hidden="true">{anchors.map((a,i)=>{const released=i<seals,n=Math.max(1,Math.floor(a.length/20));return <g key={i} data-seal-chain={i+1} data-released={released} opacity={released?.22:.85}><g transform={'translate('+a.x+' '+a.y+') rotate('+a.angle+')'}>{Array.from({length:n},(_,j)=><rect key={j} x={j*a.length/n+4} y={j%2?-3:-5} width={a.length/n-1} height={j%2?6:10} rx={j%2?3:5} fill="rgba(8,20,31,.65)" stroke={released?'#67e8f9':'#d9a843'} strokeWidth="1.5"/>)}</g><circle cx={a.tx} cy={a.ty} r="7" fill="#0b1822" stroke={released?'#67e8f9':'#d9a843'} strokeWidth="1.5"/><rect x={Math.max(0,Math.min(972,a.x-14))} y={Math.max(0,Math.min(972,a.y-14))} width="28" height="28" rx="6" fill="#0b1822" stroke={released?'#67e8f9':'#d9a843'} strokeWidth="1.5"/></g>;})}</svg></div><figcaption>十八道封印 · 已解开 {seals}/18</figcaption><style>{`.gold-seal-art{background:transparent!important}.gold-seal-scene{position:relative;background:radial-gradient(ellipse at center,rgba(217,168,67,.045),transparent 70%)}.gold-seal-scene img{padding:6%;box-sizing:border-box}.gold-seal-scene svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.gold-seal-scene rect,.gold-seal-scene circle{vector-effect:non-scaling-stroke}`}</style></figure>;
+}
