@@ -1,0 +1,13 @@
+import {useState} from 'react';
+const markers=[
+ {id:'claw',name:'爪部能力',x:4,y:51,path:'M 170 430 L 265 430 L 365 390',cx:365,cy:390},
+ {id:'body',name:'身体能力',x:76,y:54,path:'M 790 450 L 690 450 L 515 350',cx:515,cy:350},
+ {id:'core',name:'气血结构',x:4,y:75,path:'M 170 620 L 280 620 L 465 415',cx:465,cy:415},
+ {id:'state',name:'特殊状态',x:76,y:25,path:'M 790 225 L 680 225 L 500 200',cx:500,cy:200},
+];
+const css=`.gold-body-figure{position:relative;aspect-ratio:1000/800;width:100%;max-width:850px;margin:12px auto 20px;border:1px solid rgba(217,168,67,.22);border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,rgba(217,168,67,.09),rgba(8,20,31,.2) 65%)}.gold-body-figure svg{display:block;width:100%;height:100%}.gold-body-marker{position:absolute;width:20%;min-height:44px;background:rgba(8,20,31,.92);border:1px solid rgba(217,168,67,.4);border-radius:8px;color:#fcd34d;font:inherit;font-size:12px;line-height:1.4;padding:6px 2px;cursor:pointer;box-shadow:0 0 14px rgba(217,168,67,.06)}.gold-body-marker small{display:block;font-size:10px;color:#94a3b8}.gold-body-marker:hover,.gold-body-marker:focus-visible{border-color:#fcd34d;outline:2px solid rgba(252,211,77,.4);outline-offset:2px}.gold-body-empty{position:absolute;inset:40% 20%;text-align:center;color:#94a3b8;font-size:12px}.gold-body-figure path,.gold-body-figure circle{vector-effect:non-scaling-stroke}`;
+export default function GoldBodyFigure({levels}:{levels:Record<string,number>}){
+ const [failed,setFailed]=useState(false),asset=((window as any).__BASENAME__||'').replace(/\/$/,'')+'/assets/gold-body-character-v1.webp';
+ function locate(id:string){const node=document.getElementById('gold-evolution-'+id);node?.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});node?.querySelector<HTMLButtonElement>('button')?.focus({preventScroll:true});}
+ return <div className="gold-body-figure" data-gold-body-figure><style>{css}</style><svg viewBox="0 0 1000 800" role="img" aria-label="金龙真身人物与四条血脉进化路线位置"><image href={asset} x="80" y="10" width="840" height="660" preserveAspectRatio="xMidYMid meet" onError={()=>setFailed(true)}/>{markers.map(m=><g key={m.id}><path d={m.path} fill="none" stroke="#d9a843" strokeOpacity=".75" strokeWidth="1.5"/><circle cx={m.cx} cy={m.cy} r="8" fill="#0b1822" stroke="#fcd34d" strokeWidth="1.5"/><circle cx={m.cx} cy={m.cy} r="3" fill="#fcd34d"/></g>)}</svg>{failed&&<p className="gold-body-empty">人物图片暂未加载，可继续使用下方进化功能。</p>}{markers.map(m=><button type="button" className="gold-body-marker" data-body-marker={m.id} key={m.id} style={{left:m.x+'%',top:m.y+'%'}} onClick={()=>locate(m.id)} aria-label={'查看'+m.name}>{m.name}<small>{levels[m.id]||0}/4阶</small></button>)}</div>;
+}
