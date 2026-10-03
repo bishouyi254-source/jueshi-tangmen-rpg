@@ -693,7 +693,11 @@ function __fbDamage(s,target,amount,options={},logs=[]) {
   if(!a||a.hp<=0||amount<=0)return {lost:0,absorbed:0,reflected:0};
   let damage=Math.max(0,Math.round(amount));
   if(options.direct!==false&&!options.raw)damage=Math.round(damage*(1-Math.min(.9,__fbValue(a,'goldDirectReduction'))));
-  if(options.direct!==false&&!options.raw&&attacker)damage=Math.round(damage*(1+__fbValue(attacker,'directDamageUp')+(options.silverSkill?__fbValue(attacker,'silverSkillUp'):0)));
+  if(options.direct!==false&&!options.raw&&attacker){
+    const gold=__fbValue(attacker,'directDamageUp'),silver=options.silverSkill?__fbValue(attacker,'silverSkillUp'):0,before=damage;
+    damage=Math.round(damage*(1+gold+silver));
+    if(gold||silver)logs.push(`领域增幅：直接伤害 +${Math.round(gold*100)}%、银龙魂技 +${Math.round(silver*100)}%，同阶段合计 +${Math.round((gold+silver)*100)}%；${before} → ${damage}（护盾前）。`);
+  }
   if(!options.raw){const vulnerable=Math.max(__fbValue(a,'vulnerable'),options.direct!==false?__fbValue(a,'goldDirectVulnerable'):0);damage=Math.round(damage*(1+vulnerable)*(1-Math.min(.9,__fbValue(a,'reduction'))));}
   if(Number.isFinite(options.cap))damage=Math.min(damage,Math.max(0,options.cap));
   if(options.direct!==false&&!options.raw&&attacker?.effects?.goldCounter&&attacker.goldCounterCharge>0&&attacker.hp>0){damage+=Math.min(Math.round(damage*.5),attacker.goldCounterCharge);attacker.goldCounterCharge=0;logs.push('金龙霸体：承受来力转为反击。');}

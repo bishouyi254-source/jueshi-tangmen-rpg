@@ -421,12 +421,12 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   const goldAnnouncedRef=useRef('');
   if(goldBattleIdRef.current!==battleState?.meta?.goldBattle?.id){goldBattleIdRef.current=battleState?.meta?.goldBattle?.id;goldBattleRef.current=readGoldBattle(battleState?.meta?.goldBattle);}
   function __goldCommit(next){goldBattleRef.current=next;setBattleState(prev=>prev?.meta?.goldBattle?.id===next?.id?{...prev,meta:{...prev.meta,goldBattle:next}}:prev);}
-  function __goldFinish(){const old=goldBattleRef.current;if(!old?.turns)return;const next={...old,turns:old.turns-1};__goldCommit(next);const fx=__fbGet();if(fx){syncGoldDomain(fx,next);__fbCommit(fx);}if(!next.turns)addLog('金龙镇狱领域：3次行动已完成，领域结束。','system');}
+  function __goldFinish(){const old=goldBattleRef.current;if(!old?.turns)return;const next={...old,turns:old.turns-1};__goldCommit(next);const fx=__fbGet();if(fx){syncGoldDomain(fx,hasGoldKing(player)?next:undefined);__fbCommit(fx);}if(!next.turns)addLog('金龙镇狱领域：3次行动已完成，领域结束。','system');}
   const silverBattleRef=useRef(readSilverBattle(battleState?.meta?.silverBattle));
   const silverBattleIdRef=useRef(battleState?.meta?.silverBattle?.id),silverAnnouncedRef=useRef('');
   if(silverBattleIdRef.current!==battleState?.meta?.silverBattle?.id){silverBattleIdRef.current=battleState?.meta?.silverBattle?.id;silverBattleRef.current=readSilverBattle(battleState?.meta?.silverBattle);}
   function __silverCommit(next){silverBattleRef.current=next;setBattleState(prev=>prev?.meta?.silverBattle?.id===next?.id?{...prev,meta:{...prev.meta,silverBattle:next}}:prev);}
-  function __silverFinish(){const old=silverBattleRef.current;if(!old?.turns)return;const next={...old,turns:old.turns-1};__silverCommit(next);const fx=__fbGet();if(fx){syncSilverDomain(fx,next);__fbCommit(fx);}if(!next.turns)addLog('银龙元素领域：3次行动已完成，领域结束。','system');}
+  function __silverFinish(){const old=silverBattleRef.current;if(!old?.turns)return;const next={...old,turns:old.turns-1};__silverCommit(next);const fx=__fbGet();if(fx){syncSilverDomain(fx,hasSilverKing(player)?next:undefined);__fbCommit(fx);}if(!next.turns)addLog('银龙元素领域：3次行动已完成，领域结束。','system');}
   function __bloodFinish(){if(hasGoldKing(player)||hasSilverKing(player)){__goldFinish();__silverFinish();__bloodCommit({...bloodRef.current,turn:bloodRef.current.turn+1});const regen=bloodlineBonuses(player).manaRegen;if(regen&&playerHpRef.current>0)setCurrentSoulPower(v=>Math.min(attrs.maxSoulPower,v+Math.floor(attrs.maxSoulPower*regen)));}}
 
   const armorDomainRef=useRef(readArmorDomain(battleState?.meta?.armorDomain));
@@ -1221,9 +1221,9 @@ function __fbHitEnemy(damage,attacker='player',instant=false,melee=false) {
   const s=__fbGet();
   if(!s){const lost=Math.min(Math.max(0,enemyHpRef.current),Math.max(0,damage));enemyHpRef.current-=lost;setEnemyHp(enemyHpRef.current);recordDirectDamage(lost,attacker);return lost;}
   const actor=s.actors[attacker];const boost=actor?Math.max(0,...Object.values(actor.effects).filter((e:any)=>e.type==='attackUp').map((e:any)=>e.value||0)):0;
-  const effectiveDefense=__fbDefense(s,'enemy',enemy.defense,attacker==='player'?goldPenetration(goldBattleRef.current):0);
+  const effectiveDefense=__fbDefense(s,'enemy',enemy.defense,attacker==='player'?goldPenetration(hasGoldKing(player)?goldBattleRef.current:undefined):0);
   const base=instant?damage:damage*(1+boost)*(Math.max(0,enemy.defense)+500)/(effectiveDefense+500);
-  const extra=attacker==='player'&&melee&&!instant?goldMeleeExtra(goldBattleRef.current,base,effectiveDefense):0;
+  const extra=attacker==='player'&&melee&&!instant?goldMeleeExtra(hasGoldKing(player)?goldBattleRef.current:undefined,base,effectiveDefense):0;
   const adjusted=Math.round(base+extra);
   const hit=__fbDirect(s,'enemy',adjusted,{attacker,direct:true});
   __fbCommit(hit.next,hit.logs);
@@ -1243,21 +1243,21 @@ function __useBloodSkill(id){
 }
 function __useGoldKing(slot,soulIndex,ring,cost){
   const current=__fbGet();if(!current||goldSkillReady(player,bloodRef.current,slot,soulIndex)){toast.info('魂技冷却中');return;}actionLockRef.current=true;
-  const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=goldSkill(player,slot,soulIndex),bonus=bloodlineBonuses(player),pen=goldPenetration(goldBattleRef.current,bonus.penetration+(skill.forbidden&&slot===4?.35:0));
+  const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=goldSkill(player,slot,soulIndex),bonus=bloodlineBonuses(player),pen=goldPenetration(hasGoldKing(player)?goldBattleRef.current:undefined,bonus.penetration+(skill.forbidden&&slot===4?.35:0));
   const basePct=(ring.skillDamagePct||1.5)*(1+domainEff.skillDmgAdd+(attrs.coreGemBonus?.skillDmgPct||0)+bonus.skill);
   const result=calculateDamage(getEffectiveMainAttrForSoul(soul)*(1+(tempBuffs?.attack?.value||0)),__fbDefense(current,'enemy',enemy.defense)*(1-pen),true,attrs.critRate+domainEff.critAdd,attrs.critDmg+domainEff.critDmgAdd,basePct,soulIndex?secondTrueBodyTurns>0:trueBodyTurns>0,false,soul);
   const boost=Math.max(0,...Object.values(current.actors.player.effects).filter((e:any)=>e.type==='attackUp').map((e:any)=>e.value||0));
   const r=applyGoldKingSkill(player,current,bloodRef.current,slot,soulIndex,result.damage*(1+boost),Math.random,{goldBattle:goldBattleRef.current,defense:__fbDefense(current,'enemy',enemy.defense)*(1-pen)});if(r.reason){actionLockRef.current=false;return;}r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit(r.battle);recordDirectDamage(r.damage,'player');lastHitSoulIndexRef.current=soulIndex;
-  if(r.damage)showDamagePopup('-'+fmtDmg(r.damage),result.isCrit,'enemy');addLog('释放第'+(slot+1)+'魂技「'+skill.name+'」'+(r.damage?'，伤害 '+formatNumber(r.damage):'，本次不追加攻击'),'skill');scheduleEnemyAction(600);
+  if(r.damage){showDamagePopup('-'+fmtDmg(r.damage),result.isCrit,'enemy');addLog('结算来源：'+(soulIndex?'次修':'主修')+' · 保存魂环系数 '+((ring.skillDamagePct||1.5)*100).toFixed(1)+'% · 常驻共鸣已包含在角色属性中，领域与血脉按本次效果结算。','system');}addLog('释放第'+(slot+1)+'魂技「'+skill.name+'」'+(r.damage?'，伤害 '+formatNumber(r.damage):'，本次不追加攻击'),'skill');scheduleEnemyAction(600);
 }
 function __useSilverKing(slot,soulIndex,ring,cost){
  const current=__fbGet();if(!current||silverSkillReady(player,bloodRef.current,slot,soulIndex)){toast.info('魂技冷却中');return;}actionLockRef.current=true;
- const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=silverSkill(player,slot,soulIndex),pen=goldPenetration(goldBattleRef.current,silverBonuses(player).penetration),def=__fbDefense(current,'enemy',enemy.defense)*(1-pen);
+ const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=silverSkill(player,slot,soulIndex),pen=goldPenetration(hasGoldKing(player)?goldBattleRef.current:undefined,silverBonuses(player).penetration),def=__fbDefense(current,'enemy',enemy.defense)*(1-pen);
  const pct=(ring.skillDamagePct||1.5)*(1+domainEff.skillDmgAdd+(attrs.coreGemBonus?.skillDmgPct||0)+silverBonuses(player).skill);
  const boost=Math.max(0,...Object.values(current.actors.player.effects).filter((e:any)=>e.type==='spiritUp').map((e:any)=>e.value||0));
  const result=calculateDamage(getEffectiveMainAttrForSoul(soul)*(1+(tempBuffs?.spirit?.value||0))*(1+boost),def,true,attrs.critRate+domainEff.critAdd,attrs.critDmg+domainEff.critDmgAdd,pct,soulIndex?secondTrueBodyTurns>0:trueBodyTurns>0,false,soul);
  const r=applySilverSkill(player,current,bloodRef.current,slot,soulIndex,result.damage);if(r.reason){actionLockRef.current=false;return;}r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit(r.battle);recordDirectDamage(r.damage,'player');lastHitSoulIndexRef.current=soulIndex;
- if(r.damage)showDamagePopup('-'+fmtDmg(r.damage),result.isCrit,'enemy');addLog('释放第'+(slot+1)+'魂技「'+skill.name+'」'+(r.damage?'，伤害 '+formatNumber(r.damage):'，本次不追加攻击'),'skill');scheduleEnemyAction(600);
+ if(r.damage){showDamagePopup('-'+fmtDmg(r.damage),result.isCrit,'enemy');addLog('结算来源：'+(soulIndex?'次修':'主修')+' · 保存魂环系数 '+((ring.skillDamagePct||1.5)*100).toFixed(1)+'% · 常驻共鸣已包含在角色属性中，领域与血脉按本次效果结算。','system');}addLog('释放第'+(slot+1)+'魂技「'+skill.name+'」'+(r.damage?'，伤害 '+formatNumber(r.damage):'，本次不追加攻击'),'skill');scheduleEnemyAction(600);
 }
   useEffect(()=>{const b=silverBattleRef.current;if(!battleInitRef.current||!b||!hasSilverKing(player)||!['playerTurn','enemyTurn'].includes(phase)||silverAnnouncedRef.current===b.id)return;silverAnnouncedRef.current=b.id;const fx=__fbGet();if(fx)__fbCommit(fx,b.turns?['银龙元素领域展开：魂技伤害与魂力节约生效，可与金龙镇狱领域共存，剩余 '+b.turns+' 次行动。']:[]);},[phase,battleState?.meta?.silverBattle?.id]);
   useEffect(()=>{const old=silverBattleRef.current;if(!battleInitRef.current||!old||!['victory','defeat','flee'].includes(phase)||old.settled)return;const progress=readSilverBlood(player?.silverBloodline).insight,gain=phase==='victory'&&!progress.claimed.includes(old.id)?Math.min(old.reward,2000-progress.points):0;if(phase==='victory')setPlayer(p=>settleSilver(p,old,'victory'));__silverCommit({...old,turns:0,settled:true});const fx=__fbRef.current;if(fx){syncSilverDomain(fx,silverBattleRef.current);__fbCommit(fx);}if(gain>0)addLog('元素感悟 +'+gain+'；每100点精神+1%、魂力上限+0.5%。','system');},[phase,battleState?.meta?.silverBattle?.id]);
@@ -2942,7 +2942,8 @@ function __fbRestoreSpirits(spirits,saved) {
         </span>
       </header>
 
-         {goldBattleRef.current?.turns>0&&<div role="status" data-gold-prison-active style={{fontSize:12,padding:'6px 12px',color:'#fcd34d',background:'#10233a'}}>金龙镇狱领域 · 剩余 {goldBattleRef.current.turns} 次行动 · 力量压制／破甲／狂暴</div>}
+         {hasGoldKing(player)&&goldBattleRef.current?.turns>0&&<div role="status" data-gold-prison-active style={{fontSize:12,padding:'6px 12px',color:'#fcd34d',background:'#10233a'}}>金龙镇狱领域 · 剩余 {goldBattleRef.current.turns} 次行动 · 力量压制／破甲／狂暴</div>}
+         {hasSilverKing(player)&&silverBattleRef.current?.turns>0&&<div role="status" data-silver-realm-active style={{fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>银龙元素领域 · 剩余 {silverBattleRef.current.turns} 次行动 · 魂技伤害 +{Math.round(silverBattleRef.current.damage*100)}% · 魂力消耗 -{Math.round(silverBattleRef.current.cost*100)}%</div>}
          {(battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||hasGoldKing(player)||hasSilverKing(player))&&__fbRef.current&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
          {battleState?.meta?.shadow&&<div role="status" className="px-3 py-2 text-purple-300">轮回领域已展开：全属性 +{battleState.meta.shadow.lifeIndex*10}%，魂技伤害 +{battleState.meta.shadow.lifeIndex}%</div>}
          {/* 战斗主区域 - flex-1 占满剩余空间 */}

@@ -1,3 +1,4 @@
+import {elementSet,resonance,extremeMultipliers} from './attributeRules';
 import {normalizeSilver,readSilverBlood,reincarnateSilver,silverBonuses,createSilverBattle,settleSilver,SILVER_ELEMENTS} from './silverKing';
 import {normalizeGoldKing} from './goldKing';
 import {normalizeGoldBlood,readGoldBlood,goldBloodBonuses,createGoldBattle,settleGoldBlood} from './goldDominance';
@@ -1241,8 +1242,8 @@ function normalizeElement(attr: string | undefined): string {
 export function calcElementAffinity(playerElement: string | undefined, ringElement: string | undefined): number {
   const p = normalizeElement(playerElement);
   const r = normalizeElement(ringElement);
-  if (!p || !r || p === '无属性' || r === '无属性') return 0;
-  if(['全','全能','全元素'].includes(p))return ['无','空'].includes(r)?0:.30;
+  if (!p || !r || ['无','空'].includes(p) || ['无','空'].includes(r)) return 0;
+  if(['全','全能','全元素'].includes(p))return __localElementSet(ringElement).size?.30:0;
   if(['七元素','七元素掌控'].includes(p))return (SILVER_ELEMENTS as readonly string[]).includes(r)?.3:0;
   // v2.0 特殊属性：时间、空间 互为相生，精神属性自洽
   if (p === '时间' && r === '空间') return 0.15;
@@ -1684,85 +1685,14 @@ export function calcAttributes(player: IPlayer): IAttrs {
     attack += reincarnationAtkBonus;
   }
 
-  // 极致属性加成（对应武魂的极致属性，主属性+15%~25%）
-  if (player.martialSoul.extremeAttribute) {
-    const extreme = player.martialSoul.extremeAttribute;
-    if (extreme === '全属性') {
-      // 全属性：五维全面提升15%
-      attack *= 1.15;
-      defense *= 1.15;
-      speed *= 1.15;
-      spirit *= 1.15;
-      hp *= 1.15;
-    } else {
-      // 力量/防御/速度/精神 主属性加成20%~25%
-      if (extreme.includes('力量')) attack *= 1.2;
-      if (extreme.includes('防御')) defense *= 1.2;
-      if (extreme.includes('速度')) speed *= 1.25;
-      if (extreme.includes('敏捷')) speed *= 1.25;
-      if (extreme.includes('精神')) spirit *= 1.25;
-      if (extreme.includes('灵魂')) spirit *= 1.25;
-      if (extreme.includes('轮回')) spirit *= 1.25;
-      // 元素属性类极致：攻击+15% + 对应属性方向+5%
-      const elementExtremes = [
-        { key: '冰', bonus: { defense: 0.05 } },
-        { key: '火', bonus: { attack: 0.05 } },
-        { key: '雷', bonus: { attack: 0.05, speed: 0.03 } },
-        { key: '雷霆', bonus: { attack: 0.05, speed: 0.03 } },
-        { key: '光明', bonus: { spirit: 0.05, hp: 0.03 } },
-        { key: '黑暗', bonus: { attack: 0.05, critDmg: 0.05 } },
-        { key: '暗', bonus: { attack: 0.05, critDmg: 0.05 } },
-        { key: '毒', bonus: { spirit: 0.05, attack: 0.03 } },
-        { key: '水', bonus: { defense: 0.05, hp: 0.03 } },
-        { key: '木', bonus: { hp: 0.08, defense: 0.03 } },
-        { key: '土', bonus: { defense: 0.05, hp: 0.05 } },
-        { key: '金', bonus: { attack: 0.05, defense: 0.03 } },
-        { key: '风', bonus: { speed: 0.05, attack: 0.03 } },
-        { key: '空间', bonus: { speed: 0.05, spirit: 0.03 } },
-        { key: '时间', bonus: { spirit: 0.05, speed: 0.03 } },
-        { key: '时空', bonus: { spirit: 0.05, speed: 0.05 } },
-        { key: '混沌', bonus: { allAttr: 0.05 } },
-        { key: '杀', bonus: { attack: 0.05, critRate: 0.03 } },
-        { key: '剑', bonus: { attack: 0.05, critRate: 0.02 } },
-        { key: '刃', bonus: { attack: 0.05, critDmg: 0.05 } },
-      ];
-      let hasElementMatch = false;
-      for (const elem of elementExtremes) {
-        if (extreme.includes(elem.key)) {
-          hasElementMatch = true;
-          if (elem.bonus.attack) attack *= (1 + elem.bonus.attack);
-          if (elem.bonus.defense) defense *= (1 + elem.bonus.defense);
-          if (elem.bonus.speed) speed *= (1 + elem.bonus.speed);
-          if (elem.bonus.spirit) spirit *= (1 + elem.bonus.spirit);
-          if (elem.bonus.hp) hp *= (1 + elem.bonus.hp);
-          break; // 只匹配第一个命中的元素
-        }
-      }
-      // 属性类极致基础攻击加成15%（只要是元素/属性类极致都加）
-      if (hasElementMatch) {
-        attack *= 1.15;
-      }
-    }
-  }
+  const mainExtremeMul=extremeMultipliers(player.martialSoul.extremeAttribute||'');
+  attack*=mainExtremeMul.attack;defense*=mainExtremeMul.defense;speed*=mainExtremeMul.speed;spirit*=mainExtremeMul.spirit;hp*=mainExtremeMul.hp;
 
   // 属性克制加成：武魂属性与魂环/魂骨魂兽属性相同，各+5%，叠加最高+10%
   // 主修武魂属性 + 第一武魂魂环 + 所有魂骨 参与共鸣
   // 🔴 修复：优先使用 extremeAttribute（极致属性）作为判定属性，再 fallback 到 element
   // 极致之冰/极致之火/全属性 等极致属性比普通 element 更精确，能确保同属性正确共鸣
-  const primaryExtreme = player.martialSoul.extremeAttribute;
-  // 仅当极致属性是元素类（含元素关键字）时才用极致属性参与共鸣
-  // 非元素类极致属性（如极致之力量、极致之速度、极致之防御）回退到武魂基础属性
-  let playerElement: string;
-  if (primaryExtreme && primaryExtreme !== '无') {
-    const normExtreme = normalizeBeastAttribute(primaryExtreme);
-    if (normExtreme !== '无属性') {
-      playerElement = primaryExtreme;
-    } else {
-      playerElement = player.martialSoul.element || getSoulElement(player.martialSoul.name);
-    }
-  } else {
-    playerElement = player.martialSoul.element || getSoulElement(player.martialSoul.name);
-  }
+  const playerElement=player.martialSoul.element||getSoulElement(player.martialSoul.name);
   const boneList = player.divineArmor?.hasArmor && player.divineArmor.sourceBones
     ? Object.values(player.divineArmor.sourceBones).filter((b): b is IItem => b !== null && b.type === 'soulBone')
     : Object.values(player.soulBones).filter((b): b is IItem => b !== null && b.type === 'soulBone');
@@ -1780,34 +1710,11 @@ export function calcAttributes(player: IPlayer): IAttrs {
     hp *= mul;
   }
   // 第二武魂属性加成：次修武魂属性 + 第二武魂魂环 + 所有魂骨 参与共鸣（独立计算，不累加上限）
-  if (player.isTwinSoul && player.secondSoul && player.secondSoulRings && player.secondSoulRings.length > 0) {
-    const secondExtreme = player.secondSoul.extremeAttribute;
-    const secondElement = (secondExtreme && secondExtreme !== '无') ? secondExtreme : (player.secondSoul.element || getSoulElement(player.secondSoul.name));
-    // 第二武魂极致属性加成（次修，强度为主修的1/2，避免双生武魂叠加过强）
-    if (secondExtreme) {
-      if (secondExtreme === '全属性') {
-        // 全属性：五维全面提升7.5%（主修15%的一半）
-        attack *= 1.075;
-        defense *= 1.075;
-        speed *= 1.075;
-        spirit *= 1.075;
-        hp *= 1.075;
-      } else {
-      if (secondExtreme.includes('力量')) attack *= 1.1;
-      if (secondExtreme.includes('防御')) defense *= 1.1;
-      if (secondExtreme.includes('速度')) speed *= 1.12;
-      if (secondExtreme.includes('敏捷')) speed *= 1.12;
-      if (secondExtreme.includes('精神')) spirit *= 1.12;
-      if (secondExtreme.includes('灵魂')) spirit *= 1.12;
-      if (secondExtreme.includes('轮回')) spirit *= 1.12;
-      // 元素类次修加成：攻击+7.5%
-      const elemKeys = ['冰','火','雷','雷霆','光明','黑暗','暗','毒','水','木','土','金','风','空间','时间','时空','混沌','杀','剑','刃'];
-      for (const k of elemKeys) {
-        if (secondExtreme.includes(k)) { attack *= 1.075; break; }
-      }
-      }
-    }
-    const secondBonus = calcAttributeBonus(secondElement, player.secondSoulRings, boneList, {
+  if (player.isTwinSoul && player.secondSoul) {
+    const secondElement=player.secondSoul.element||getSoulElement(player.secondSoul.name);
+    const secondExtremeMul=extremeMultipliers(player.secondSoul.extremeAttribute||'',true);
+    attack*=secondExtremeMul.attack;defense*=secondExtremeMul.defense;speed*=secondExtremeMul.speed;spirit*=secondExtremeMul.spirit;hp*=secondExtremeMul.hp;
+    const secondBonus = calcAttributeBonus(secondElement, player.secondSoulRings||[], boneList, {
       quality: player.secondSoul.quality,
       extremeAttribute: player.secondSoul.extremeAttribute,
     });
@@ -11913,31 +11820,8 @@ export function useRecruits() {
   }, [player?.team]);
 }
 
-function __localElementSet(value){
- const result=new Set();
- for(const part of String(value||'').split(/[·/、,，+|]/)){
-  const text=part.trim();
-  if(['七元素','七元素掌控'].includes(text)){for(const e of SILVER_ELEMENTS)result.add(e+'属性');continue;}
-  if(!text||['无','无属性','空'].includes(text))continue;
-  if(['全属性','全能属性','全元素属性'].includes(text)){result.add('*');continue;}
-  const element=normalizeBeastAttribute(text);
-  if(element&&element!=='无属性')result.add(element);
- }
- return result;
-}
-function __localResonance(element,rings,bones,options){
- let elements=__localElementSet(options?.extremeAttribute);
- if(!elements.size)elements=__localElementSet(element);
- const match=(attribute,name)=>{
-  if(elements.has('风属性')&&/^风(?:属性|系)?$/.test(String(attribute||'')))return true;
-  // An explicit neutral element must not be replaced with a name guess.
-  const targets=__localElementSet(attribute==null||attribute===''?inferElementFromName(name||''):attribute);
-  return [...targets].some(target=>elements.size>0&&(elements.has('*')||target==='*'||elements.has(target)));
- };
- const hasRingMatch=(rings||[]).some(r=>match(r.beastAttribute,r.soulBeastName));
- const hasBoneMatch=(bones||[]).some(b=>match(b.beastAttribute,b.name));
- return {bonusPct:(hasRingMatch?.05:0)+(hasBoneMatch?.05:0),hasRingMatch,hasBoneMatch,isAllAttr:elements.has('*')};
-}
+function __localElementSet(value){return elementSet(value,normalizeBeastAttribute);}
+function __localResonance(element,rings,bones,options){return resonance(element,rings,bones,options,normalizeBeastAttribute,inferElementFromName);}
 function __localBoneGrowth(bone,newYears,slot){
  const oldYears=Math.max(0,Number(bone.soulBoneYears)||0);
  const years=Math.max(oldYears,Math.min(9990000,newYears));
@@ -11955,3 +11839,11 @@ const localBeastElements={"风尾鸡冠蛇":"木属性","时序夜狼":"时间�
 export function localBeastElement(element,name){const known=new Set(['金属性','木属性','水属性','火属性','土属性','冰属性','光属性','暗属性','时间属性','空间属性','精神属性']);const explicit=normalizeBeastAttribute(element);if(known.has(explicit))return explicit;const species=normalizeBeastAttribute(localBeastElements[name]);if(known.has(species))return species;return normalizeBeastAttribute(inferElementFromName(name||''));}
 
 export function localPendingLawChoices(level:number,dt:any){const earned=Math.min(27,Math.max(0,Math.floor((level-100)/2)));const claimed=['time','space','gold','wood','water','fire','earth','light','dark'].reduce((sum,k)=>sum+(dt?.lawFragments?.[k]||0)+(dt?.lawsFused?.[k]?3:0),0);return Math.max(0,earned-claimed);}
+
+export function dragonAttributeSources(p:any){
+ const active=p?.martialSoul&&['金龙王','银龙王'].includes(p.martialSoul.name)||p?.isTwinSoul&&['金龙王','银龙王'].includes(p.secondSoul?.name);if(!active)return null;
+ const bones=p.divineArmor?.hasArmor&&p.divineArmor.sourceBones?Object.values(p.divineArmor.sourceBones).filter((b:any)=>b?.type==='soulBone'):Object.values(p.soulBones||{}).filter((b:any)=>b?.type==='soulBone');
+ const souls=[{soul:p.martialSoul,rings:p.soulRings||[],secondary:false},...(p.isTwinSoul&&p.secondSoul?[{soul:p.secondSoul,rings:p.secondSoulRings||[],secondary:true}]:[])].map(x=>({...x,extreme:extremeMultipliers(x.soul.extremeAttribute||'',x.secondary),resonance:calcAttributeBonus(x.soul.element||getSoulElement(x.soul.name),x.rings,bones,{extremeAttribute:x.soul.extremeAttribute})}));
+ const b=bloodlineBonuses(p),g=goldBloodBonuses(p),v=silverBonuses(p),a=armorBonuses(p);
+ return {souls,bones,blood:{attack:b.attack+g.attack,defense:b.defense+v.defense,speed:b.speed+v.speed,spirit:v.spirit,hp:b.hp+g.hp+v.hp,mana:b.mana+v.mana},skill:{gold:b.skill,silver:v.skill},armor:a};
+}

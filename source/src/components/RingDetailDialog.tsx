@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, CheckCircle2, Trash2, Plus, AlertTriangle } from 'lucide-react';
-import { RING_COLOR_MAP, RING_DISPLAY_COLOR, inferElementFromName, normalizeBeastAttribute } from '@/lib/gameStore';
+import { RING_COLOR_MAP, RING_DISPLAY_COLOR, inferElementFromName, normalizeBeastAttribute, calcAttributeBonus } from '@/lib/gameStore';
 import type { ISoulRing } from '@/lib/gameStore';
 import { getBeastSpeciesByName, getDangerLevel } from '@/data/soulbeasts';
 import SoulRing from '@/components/SoulRing';
@@ -84,41 +84,8 @@ export default function RingDetailDialog({
   // （例：'暗属性'→'黑暗属性'，避免界面显示『暗属性』但判断用『黑暗属性』）
   const rawRingBeastAttribute = ring.beastAttribute || inferElementFromName(ring.soulBeastName);
   const ringBeastAttribute = normalizeBeastAttribute(rawRingBeastAttribute);
-  // 属性匹配规则：
-  // 1. 混沌属性适配所有属性
-  // 2. 归一化后双向包含匹配（处理极致之冰/植物→木 等别名）
-  // 🔴 关键修复：极致属性优先（与 calcAttributes 一致），再 fallback 到普通 element
-  // 之前只用 playerElement 导致有极致属性时界面显示「无共鸣」但实际有加成
-  const playerEl = (extremeAttribute && extremeAttribute !== '无') ? extremeAttribute : (playerElement || '');
-  const isChaos = playerEl === '混沌属性' || playerEl === '极致之混沌' || playerEl.includes('混沌');
-
-  // 属性归一化（与 calcAttributeBonus 中的 normalize 函数保持一致）
-  const SPECIAL_MAP: Record<string, string> = {
-    '植物': '木', '剑': '金', '刀': '金', '毒': '木', '龙枪': '金',
-    '光明': '光', '黑暗': '暗', '死亡': '暗', '修罗': '暗', '噬魂': '暗',
-    '幽冥': '暗', '邪魔': '暗', '骨龙': '暗', '魔': '暗', '力量': '金',
-    '杀': '金', '毁灭': '金', '雷霆': '雷', '刃': '金', '生命': '木',
-    '速度': '风', '敏捷': '风', '防御': '土', '辅助': '光', '空间': '混沌',
-    '时空': '混沌', '时间': '混沌', '轮回': '精神', '灵魂': '精神',
-    '冰碧': '冰', '冰帝': '冰', '雪帝': '冰',
-  };
-  const normalizeAttr = (s: string): string => {
-    if (!s) return '';
-    let r = s.replace(/^极致之/, '');
-    r = r.replace(/属性$/, '');
-    if (SPECIAL_MAP[r]) return SPECIAL_MAP[r];
-    for (const key of Object.keys(SPECIAL_MAP)) {
-      if (r.includes(key)) return SPECIAL_MAP[key];
-    }
-    return r;
-  };
-
-  const normPlayer = normalizeAttr(playerEl);
-  const normRing = normalizeAttr(ringBeastAttribute);
-  const isFullAttribute = isChaos || normPlayer === '混沌';
-  const isAttributeMatch = !!(playerEl && playerEl !== '无属性' && (
-    isFullAttribute || (normRing && normPlayer && (normRing.includes(normPlayer) || normPlayer.includes(normRing)))
-  ));
+  const playerEl = extremeAttribute && extremeAttribute !== '无' ? extremeAttribute : (playerElement || '无属性');
+  const isAttributeMatch=calcAttributeBonus(playerElement||'无属性',[ring],[],{extremeAttribute}).hasRingMatch;
 
   return (
     <AnimatePresence>
@@ -443,8 +410,8 @@ export default function RingDetailDialog({
                       : '—'}
                   </div>
                   <div className="text-[9px] text-muted-foreground mt-1 leading-relaxed space-y-0.5">
-                    <div>魂技伤害 = 攻击力 × 伤害百分比</div>
-                    {isAttributeMatch && <div className="text-emerald-400">属性共鸣 +5% 已计入</div>}
+                    <div>基础魂技伤害 = 对应修炼属性 ×（1 + 保存系数）</div>
+                    {isAttributeMatch && <div className="text-emerald-400">匹配魂环使常驻五维 +5%，同类只计一次</div>}
                   </div>
                 </div>
                 </div>
@@ -453,8 +420,8 @@ export default function RingDetailDialog({
                {/* 🔴 修复：显示条件用 playerEl（极致属性优先），而不是原始 playerElement
                 *  神级武魂只有 extremeAttribute 没有 element 时，整个共鸣区不会被隐藏
                 *  显示的武魂属性名也用 playerEl，与实际判断属性保持一致 */}
-               {playerEl && playerEl !== '无属性' && (
-                 <div className="rounded-xl p-2.5 mb-2.5 border text-[11px] space-y-1" style={{
+               {(
+                 <div data-ring-resonance data-match={isAttributeMatch} className="rounded-xl p-2.5 mb-2.5 border text-[11px] space-y-1" style={{
                   backgroundColor: 'rgba(74,222,128,0.08)',
                   borderColor: (isAttributeMatch ? 'rgba(74,222,128,0.4)' : 'rgba(74,222,128,0.15)'),
                 }}>
@@ -467,7 +434,7 @@ export default function RingDetailDialog({
                    {isAttributeMatch ? (
                      <div className="flex items-center gap-1.5 text-emerald-400">
                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                       <span className="font-medium">与武魂属性相同，伤害 <span className="font-bold">+5%</span></span>
+                       <span className="font-medium">与武魂属性匹配，常驻五维 <span className="font-bold">+5%</span></span>
                      </div>
                    ) : (
                     <div className="text-cyan-300/90">

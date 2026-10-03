@@ -1,3 +1,4 @@
+import DragonAttributeSources from './DragonAttributeSources';
 import { hasLiehun, readNianBonus } from '@/lib/liehunGrowth';
 import { useState, useMemo, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -221,6 +222,7 @@ export default function CharacterPanel() {
   if (!player) {
     return (
       <div className="flex h-full items-center justify-center p-8">
+      <DragonAttributeSources player={player} />
         <div className="text-muted-foreground">加载中…</div>
       </div>
     );
@@ -228,6 +230,7 @@ export default function CharacterPanel() {
 
   return (
     <div className="p-0 md:p-1 space-y-4 md:space-y-6">
+      <DragonAttributeSources player={player} />
       {/* 角色信息卡 */}
       <div className="relative overflow-hidden rounded-2xl border border-cyan-500/30 bg-card/75 backdrop-blur-sm p-4 md:p-6 shadow-md text-foreground">
         <div className="flex items-center gap-3 md:gap-4">
@@ -1617,9 +1620,7 @@ export default function CharacterPanel() {
                    // 使用 gameStore 中的 calcAttributeBonus 统一归一化逻辑，确保显示与计算一致
                    // 单块魂骨测试：传入 1 个魂环（空）+ 1 块魂骨（当前），看是否有 bone match
                   const testResult = calcAttributeBonus(
-                    player.martialSoul.extremeAttribute && player.martialSoul.extremeAttribute !== '无'
-                      ? player.martialSoul.extremeAttribute
-                      : player.martialSoul.element || '无属性',
+                    player.martialSoul.element || '无属性',
                     [],
                     [{ name: selectedEquip.item.name, beastAttribute: selectedEquip.item.beastAttribute }],
                     { quality: player.martialSoul.quality, extremeAttribute: player.martialSoul.extremeAttribute }
@@ -1628,9 +1629,7 @@ export default function CharacterPanel() {
                   // 第二武魂也检查
                   let secondMatch = false;
                   if (player.isTwinSoul && player.secondSoul) {
-                    const secondEl = player.secondSoul.extremeAttribute && player.secondSoul.extremeAttribute !== '无'
-                      ? player.secondSoul.extremeAttribute
-                      : (player.secondSoul.element || '无属性');
+                    const secondEl = player.secondSoul.element || '无属性';
                     const secondResult = calcAttributeBonus(
                       secondEl,
                       [],
@@ -1654,7 +1653,7 @@ export default function CharacterPanel() {
                       {finalMatch ? (
                            <div className="flex items-center gap-1.5 text-emerald-400">
                              <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                             <span className="font-medium">与武魂属性相同，伤害 <span className="font-bold">+5%</span></span>
+                             <span className="font-medium">与武魂属性匹配，常驻五维 <span className="font-bold">+5%</span></span>
                            </div>
                         ) : (
                          <div className="text-cyan-300">
