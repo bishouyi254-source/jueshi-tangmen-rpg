@@ -1,5 +1,6 @@
 // Names reference the research report; numerical effects are this game's balance rules.
 export const GOLD_KING_BASE_SKILLS=['黄金龙体','金龙霸体','黄金龙吼','金龙狂暴领域','金龙震爆','金龙镇狱杀','金龙王真身（游戏原创）','黄金龙瀑','金龙王破灭（游戏原创）'];
+export const GOLD_KING_ATTRIBUTES='极致之力量·极致之速度·极致之防御·时间属性';
 export const DRAGON_FORBIDDEN=['禁万法·龙皇破','禁时空·龙皇斩','禁生死·龙皇刺','禁平凡·龙皇冲','禁天地·龙皇斗','禁乾坤·龙皇灭','禁苍穹·龙皇陨','禁寰宇·龙皇耀'];
 export const GOLD_EVOLUTIONS=[
  {id:'claw',name:'爪部能力',stages:['金龙爪','粉碎与撕裂','龙爪震爆','双爪进化'],desc:'每阶攻击+2%、魂技伤害+1%，金龙王攻击魂技额外忽略5%防御'},
@@ -36,7 +37,7 @@ export function normalizeGoldKing(p:any){
   if((index===1&&p.isTwinSoul!==true)||p[soulKey]?.name!=='金龙王')continue;
   const skills=GOLD_KING_BASE_SKILLS.map((_,i)=>goldSkill(p,i,index)!.name);
   const rings=(p[ringKey]||[]).map((r:any,i:number)=>{const s=goldSkill(p,i,index);if(!s)return r;return r.skillName===s.name&&r.skillDesc===s.desc&&r.skillType===s.skillType?r:{...r,skillName:s.name,skillDesc:s.desc,skillType:s.skillType};});
-  if(JSON.stringify(p[soulKey].soulSkills)!==JSON.stringify(skills)||rings.some((r:any,i:number)=>r!==p[ringKey]?.[i]))out={...out,[soulKey]:{...p[soulKey],soulSkills:skills},[ringKey]:rings};
+  if(p[soulKey].element!=='时间属性'||p[soulKey].extremeAttribute!==GOLD_KING_ATTRIBUTES||JSON.stringify(p[soulKey].soulSkills)!==JSON.stringify(skills)||rings.some((r:any,i:number)=>r!==p[ringKey]?.[i]))out={...out,[soulKey]:{...p[soulKey],element:'时间属性',extremeAttribute:GOLD_KING_ATTRIBUTES,soulSkills:skills},[ringKey]:rings};
  }
  return out;
 }

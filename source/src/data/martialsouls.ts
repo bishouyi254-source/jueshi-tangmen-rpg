@@ -1,5 +1,5 @@
 import {SILVER_SKILLS} from '@/lib/silverKing';
-import {GOLD_KING_BASE_SKILLS} from '../lib/goldKing';
+import {GOLD_KING_BASE_SKILLS,GOLD_KING_ATTRIBUTES} from '../lib/goldKing';
 // EXPORTS: IMartialSoul, MOCK_MARTIAL_SOULS, generateSoulSkills, getSoulDepartment, getSoulElement, getCultivationAttr, CULTIVATION_ATTR_LABEL, evolveMartialSoul
 export interface IMartialSoul {
   id: string
@@ -197,11 +197,11 @@ const superDivineSouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAtt
 
 // === 至高神级（1%）两仪神剑——阴阳茶赐予的无上武魂 ===
 const supremeDivineSouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'>[] = [
- {name:'银龙王',quality:'supremeDivine',type:'兽武魂·控制系',description:'掌控火、水、土、风、光、暗、空间七元素。元素潮汐、元素掌控、元素融合、元素之杖参考原著明确魂技，其余位置为原著能力的游戏适配。培养元素与银龙真身，金银领域可同时展开。',extremeAttribute:'七元素掌控',element:'七元素',baseStats:{attack:85,defense:90,speed:95,spirit:135,hp:130},customSoulSkills:[...SILVER_SKILLS]},
+ {name:'银龙王',quality:'supremeDivine',type:'兽武魂·控制系',description:'拥有全属性，血脉进化培养火、水、土、风、光、暗、空间七种元素。元素潮汐、元素掌控、元素融合、元素之杖参考原著明确魂技，其余位置为原著能力的游戏适配。培养元素与银龙真身，金银领域可同时展开。',extremeAttribute:'全属性',element:'全属性',baseStats:{attack:85,defense:90,speed:95,spirit:135,hp:130},customSoulSkills:[...SILVER_SKILLS]},
   {
     name: '金龙王', quality: 'supremeDivine', type: '兽武魂·强攻系',
     description: '本游戏改编的金龙王武魂：气血魂技随魂环解锁；十二封印将第一至第四魂技进化为龙皇禁法，十六封印将第五、第六、第八、第九魂技进化。血脉可培养爪部、身体、龙核和血龙变。第七、第九初始魂技为游戏原创。',
-    extremeAttribute: '极致之金', element:'金属性',
+    extremeAttribute:GOLD_KING_ATTRIBUTES, element:'时间属性',
     baseStats:{attack:125,defense:95,speed:90,spirit:85,hp:140},
     customSoulSkills:[...GOLD_KING_BASE_SKILLS],
   },
@@ -868,7 +868,7 @@ const SOUL_ELEMENT_MAP: Record<string, string> = {
   '修罗之剑': '暗属性',
   '轮回之眼': '空间属性',
   '白银龙枪': '水属性',
-  '银龙王':'七元素','金龙王': '金属性',
+  '银龙王':'全属性','金龙王': '时间属性',
   '黄金龙枪': '金属性',
   '命运之盘': '时间属性',
   '鸿蒙金乌': '火属性',

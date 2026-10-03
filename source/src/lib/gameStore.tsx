@@ -1242,6 +1242,7 @@ export function calcElementAffinity(playerElement: string | undefined, ringEleme
   const p = normalizeElement(playerElement);
   const r = normalizeElement(ringElement);
   if (!p || !r || p === '无属性' || r === '无属性') return 0;
+  if(['全','全能','全元素'].includes(p))return ['无','空'].includes(r)?0:.30;
   if(['七元素','七元素掌控'].includes(p))return (SILVER_ELEMENTS as readonly string[]).includes(r)?.3:0;
   // v2.0 特殊属性：时间、空间 互为相生，精神属性自洽
   if (p === '时间' && r === '空间') return 0.15;
