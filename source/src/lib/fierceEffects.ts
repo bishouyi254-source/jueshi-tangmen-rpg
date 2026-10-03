@@ -695,9 +695,11 @@ function __fbDamage(s,target,amount,options={},logs=[]) {
   if(options.direct!==false&&!options.raw)damage=Math.round(damage*(1-Math.min(.9,__fbValue(a,'goldDirectReduction'))));
   if(!options.raw){damage=Math.round(damage*(1+__fbValue(a,'vulnerable'))*(1-Math.min(.9,__fbValue(a,'reduction'))));}
   if(Number.isFinite(options.cap))damage=Math.min(damage,Math.max(0,options.cap));
+  if(options.direct!==false&&!options.raw&&attacker?.effects?.goldCounter&&attacker.goldCounterCharge>0&&attacker.hp>0){damage+=Math.min(Math.round(damage*.5),attacker.goldCounterCharge);attacker.goldCounterCharge=0;logs.push('金龙霸体：承受来力转为反击。');}
   const absorbed=Math.min(a.shield,damage);a.shield-=absorbed;damage-=absorbed;
   const before=a.hp;let lost=Math.min(before,damage);a.hp=before-lost;
   if(a.hp===0&&target==='enemy'&&__FBProfiles[s.beastId]?.immortal&&!a.immortalUsed){a.hp=1;a.immortalUsed=true;lost=before-1;logs.push('鬼帝触发【生死轮转】：本场唯一一次免死，保留1点气血。');}
+  if(options.direct!==false&&!options.raw&&a.hp>0&&__fbValue(a,'goldCounter')>0)a.goldCounterCharge=Math.min(Math.floor(a.maxHp*.08),(a.goldCounterCharge||0)+Math.round(lost*.5));
   let reflected=0;
   // The defender must survive the hit; lethal hits never retaliate.
   if(options.direct!==false&&a.hp>0&&attacker?.hp>0){
@@ -722,6 +724,7 @@ function __fbBegin(s,key,logs=[]) {
 }
 function __fbFinish(s,key) {
   const a=s.actors[key];if(!a)return;
+  if(!a.effects.goldCounter)a.goldCounterCharge=0;
   for(const [id,e] of Object.entries(a.effects))if(e.type!=='goldDirectReduction'&&e.born<a.action&&--e.turns<=0)delete a.effects[id];
 }
 function __fbDirect(s,target,damage,options={}) {
@@ -729,7 +732,7 @@ function __fbDirect(s,target,damage,options={}) {
   return {next,logs,...result};
 }
 function __fbDefense(s,key,originalDef,penetration=0) {
-  const a=s.actors[key];return Math.max(0,originalDef*(1-Math.min(.9,a?__fbValue(a,'armorDown'):0))*(1-Math.min(1,penetration)));
+  const a=s.actors[key];return Math.max(0,originalDef*(1+(a?__fbValue(a,'defenseUp'):0))*(1-Math.min(.9,a?__fbValue(a,'armorDown'):0))*(1-Math.min(1,penetration)));
 }
 function __fbSpeed(s,key,base) { return Math.max(1,base*(1-Math.min(.9,__fbValue(s.actors[key],'slow')))); }
 function __fbEnemyAction(state,context={},rng=Math.random) {
@@ -744,7 +747,7 @@ function __fbEnemyAction(state,context={},rng=Math.random) {
   const rule=profile.rules[choice.slot]||{},target=context.target||'player',t=s.actors[target];
   if(!t||t.hp<=0){__fbFinish(s,'enemy');return {next:s,logs,damage:0,nonDamage:true,skillName:choice.name,target};}
   if(useSkill){s.cooldowns[choice.slot]=rule.nonDamage?3:2;a.mana-=choice.slot*60;}
-  const attr=a.stats[profile.attr||'attack']*(1+__fbValue(a,'attackUp'));
+  const attr=a.stats[profile.attr||'attack']*(1+__fbValue(a,'attackUp'))*(1-Math.min(.9,__fbValue(a,'attackDown')));
   let damage=0,totalLost=0,isCrit=false;
   if(!rule.nonDamage){
     const def=__fbDefense(s,target,context.defense??t.stats.defense,rule.penetration||0);

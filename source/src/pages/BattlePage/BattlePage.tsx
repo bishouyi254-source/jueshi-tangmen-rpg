@@ -1,4 +1,6 @@
-import {valleyAction,bloodlineProgress,BLOOD_SKILLS,readBloodBattle,bloodSkillAction} from '@/lib/dragonBloodline';
+import {hasGoldKing,goldSkill,goldEvolutions} from '@/lib/goldKing';
+import {applyGoldKingSkill,goldSkillReady,applyBloodTransform} from '@/lib/goldKingBattle';
+import {valleyAction,bloodlineProgress,bloodlineBonuses,BLOOD_SKILLS,readBloodBattle,bloodSkillAction} from '@/lib/dragonBloodline';
 import {__fbAdd,__fbShield} from '@/lib/fierceEffects';
 import {abyssAction,abyssProgress,abyssReward} from '@/lib/abyssFrontier';
 import { recordLiehunHit, type LiehunLedger } from '@/lib/liehunGrowth';
@@ -411,7 +413,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   const bloodEnemyRef=useRef(battleState?.enemy?.id);
   if(bloodEnemyRef.current!==battleState?.enemy?.id){bloodEnemyRef.current=battleState?.enemy?.id;bloodRef.current=readBloodBattle(battleState?.meta?.bloodBattle);}
   function __bloodCommit(state){bloodRef.current=state;setBattleState(prev=>prev?({...prev,meta:{...prev.meta,bloodBattle:state}}):prev);}
-  function __bloodFinish(){if(bloodlineProgress(player).seals)__bloodCommit({...bloodRef.current,turn:bloodRef.current.turn+1});}
+  function __bloodFinish(){if(hasGoldKing(player)){__bloodCommit({...bloodRef.current,turn:bloodRef.current.turn+1});const regen=bloodlineBonuses(player).manaRegen;if(regen&&playerHpRef.current>0)setCurrentSoulPower(v=>Math.min(attrs.maxSoulPower,v+Math.floor(attrs.maxSoulPower*regen)));}}
   const armorDomainRef=useRef(readArmorDomain(battleState?.meta?.armorDomain));
   const armorDomainEnemyRef=useRef(battleState?.enemy?.id);
   if(armorDomainEnemyRef.current!==battleState?.enemy?.id){armorDomainEnemyRef.current=battleState?.enemy?.id;armorDomainRef.current=readArmorDomain(battleState?.meta?.armorDomain);}
@@ -1162,7 +1164,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   // ============================================================
 // Injected inside the BattlePage component; bindings are its existing state/ref setters.
 function __fbGet() {
-  if(!attrs||!battleInitRef.current||(!__FBProfiles[enemy.id]&&!bloodlineProgress(player).seals))return null;
+  if(!attrs||!battleInitRef.current||(!__FBProfiles[enemy.id]&&!hasGoldKing(player)))return null;
   if(!__fbRef.current||__fbRef.current.beastId!==enemy.id){
     const saved=battleState?.meta?.fierceEffects;
     // The mount effect has initialized React state, but the HP mirror effects
@@ -1196,7 +1198,8 @@ function setCurrentSoulPower(value) {const next=typeof value==='function'?value(
 function __fbHitEnemy(damage,attacker='player',instant=false) {
   const s=__fbGet();
   if(!s){const lost=Math.min(Math.max(0,enemyHpRef.current),Math.max(0,damage));enemyHpRef.current-=lost;setEnemyHp(enemyHpRef.current);recordDirectDamage(lost,attacker);return lost;}
-  const adjusted=instant?damage:Math.round(damage*(Math.max(0,enemy.defense)+500)/(__fbDefense(s,'enemy',enemy.defense)+500));
+  const actor=s.actors[attacker];const boost=actor?Math.max(0,...Object.values(actor.effects).filter((e:any)=>e.type==='attackUp').map((e:any)=>e.value||0)):0;
+  const adjusted=instant?damage:Math.round(damage*(1+boost)*(Math.max(0,enemy.defense)+500)/(__fbDefense(s,'enemy',enemy.defense)+500));
   const hit=__fbDirect(s,'enemy',adjusted,{attacker,direct:true});
   __fbCommit(hit.next,hit.logs);
   if(hit.absorbed>0)addLog(`🛡️ ${enemy.name} 护盾吸收 ${hit.absorbed} 点伤害。`,'system');
@@ -1213,6 +1216,16 @@ function __useBloodSkill(id){
  if(r.skill.pct){const damage=Math.max(1,Math.round(attrs.attack*domainEff.atkMul*(1+r.skill.pct)*500/(Math.max(0,enemy.defense)+500)*armorDomainMultiplier(armorDomainRef.current,'skill')));__fbHitEnemy(damage);if(id==='roar'&&enemyHpRef.current>0&&Math.random()<.3){const n=__fbClone(__fbGet()),ls=[];__fbAdd(n,'enemy',{id:'goldStun',type:'stun',label:'黄金龙吼眩晕',turns:1,negative:true},ls);__fbCommit(n,ls);}}
  addLog('释放'+r.skill.name+'，本次行动结束。','skill');scheduleEnemyAction(500);
 }
+function __useGoldKing(slot,soulIndex,ring,cost){
+  const current=__fbGet();if(!current||goldSkillReady(player,bloodRef.current,slot,soulIndex)){toast.info('魂技冷却中');return;}actionLockRef.current=true;
+  const soul=soulIndex?playerSecondSoul:playerMartialSoul,skill=goldSkill(player,slot,soulIndex),bonus=bloodlineBonuses(player),pen=Math.min(.9,bonus.penetration+(skill.forbidden&&slot===4?.35:0));
+  const basePct=(ring.skillDamagePct||1.5)*(1+domainEff.skillDmgAdd+(attrs.coreGemBonus?.skillDmgPct||0)+bonus.skill);
+  const result=calculateDamage(getEffectiveMainAttrForSoul(soul)*(1+(tempBuffs?.attack?.value||0)),__fbDefense(current,'enemy',enemy.defense)*(1-pen),true,attrs.critRate+domainEff.critAdd,attrs.critDmg+domainEff.critDmgAdd,basePct,soulIndex?secondTrueBodyTurns>0:trueBodyTurns>0,false,soul);
+  const boost=Math.max(0,...Object.values(current.actors.player.effects).filter((e:any)=>e.type==='attackUp').map((e:any)=>e.value||0));
+  const r=applyGoldKingSkill(player,current,bloodRef.current,slot,soulIndex,result.damage*(1+boost));if(r.reason){actionLockRef.current=false;return;}r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit(r.battle);recordDirectDamage(r.damage,'player');lastHitSoulIndexRef.current=soulIndex;
+  if(r.damage)showDamagePopup('-'+fmtDmg(r.damage),result.isCrit,'enemy');addLog('释放第'+(slot+1)+'魂技「'+skill.name+'」'+(r.damage?'，伤害 '+formatNumber(r.damage):'，本次不追加攻击'),'skill');scheduleEnemyAction(600);
+}
+function __useBloodTransform(){if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;const cost=Math.ceil(attrs.maxSoulPower*.15),cd=bloodRef.current.cooldowns.transform||0;if(!goldEvolutions(player).state||cd>bloodRef.current.turn||soulPowerRef.current<cost)return;const current=__fbGet();if(!current)return;const r=applyBloodTransform(player,current);if(r.reason)return;actionLockRef.current=true;r.next.actors.player.mana=Math.max(0,r.next.actors.player.mana-cost);__fbCommit(r.next,r.logs);__bloodCommit({...bloodRef.current,cooldowns:{...bloodRef.current.cooldowns,transform:bloodRef.current.turn+7}});scheduleEnemyAction(500);}
 function __fbSilenced() {
   const s=__fbRef.current||battleState?.meta?.fierceEffects;return !!s&&Object.values(s.actors.player.effects).some(e=>e.type==='silence');
 }
@@ -1259,7 +1272,7 @@ function __fbRestoreSpirits(spirits,saved) {
   return saved?.version===1?spirits.map(a=>{const x=saved.actors?.['spirit:'+a.id];return x?{...a,hp:Math.max(0,Math.min(a.maxHp,x.hp)),dead:x.hp<=0}:a;}):spirits;
 }
 
-  useEffect(()=>{if((battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||bloodlineProgress(player).seals)&&phase==='playerTurn'&&battleInitRef.current&&!battleEndedRef.current)__fbEnterPlayer();},[phase]);
+  useEffect(()=>{if((battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||hasGoldKing(player))&&phase==='playerTurn'&&battleInitRef.current&&!battleEndedRef.current)__fbEnterPlayer();},[phase]);
   const spiritAttack = useCallback((): Promise<number> => {
     return new Promise((resolve) => {
       const aliveSpirits = battleSpirits.filter((s) => !s.dead && s.hp > 0);
@@ -1393,13 +1406,14 @@ function __fbRestoreSpirits(spirits,saved) {
      const enemyCritDmg = shadowPlan?.critExtra??0; // 敌方只有基础150%爆伤，无额外
     // 领域防御加成（玩家受到攻击时，防御 = 基础防御 × 领域防御倍率）
     // 临时增益：防御buff也参与减伤（玩家释放防御增幅魂技后应能降低受到的伤害）
-    let playerDef = Math.round(attrs.defense * domainEff.defMul);
+    let playerDef = __fbGet()?__fbDefense(__fbGet(),'player',Math.round(attrs.defense*domainEff.defMul)):Math.round(attrs.defense * domainEff.defMul);
     if (tempBuffs?.defense?.value && tempBuffs.defense.value > 0) {
       playerDef = Math.round(playerDef * (1 + tempBuffs.defense.value));
     }
+    const pressure=__fbGet()?Math.max(0,...Object.values(__fbGet().actors.enemy.effects).filter((e:any)=>e.type==='attackDown').map((e:any)=>e.value||0)):0;
     const result = useSkill
-      ? calculateEnemyDamage(shadowPlan?.attr??enemy.attack,playerDef,true,enemyCritRate,enemyCritDmg,shadowPlan?.pct)
-      : calculateEnemyDamage(shadowPlan?.attr??enemy.attack,playerDef,false,enemyCritRate,enemyCritDmg);
+      ? calculateEnemyDamage((shadowPlan?.attr??enemy.attack)*(1-pressure),playerDef,true,enemyCritRate,enemyCritDmg,shadowPlan?.pct)
+      : calculateEnemyDamage((shadowPlan?.attr??enemy.attack)*(1-pressure),playerDef,false,enemyCritRate,enemyCritDmg);
     const dmg = shadowPlan?.nonDamage?0:result.damage;
     const critText = result.isCrit ? '【暴击】' : '';
     if(!shadowPlan?.nonDamage){
@@ -1679,6 +1693,7 @@ function __fbRestoreSpirits(spirits,saved) {
       return;
     }
 
+    if(goldSkill(player,ringIndex,soulIndex)){__useGoldKing(ringIndex,soulIndex,ring,cost);return;}
      actionLockRef.current = true;
      try {
      setCurrentSoulPower((sp) => Math.max(0, sp - cost));
@@ -2060,7 +2075,7 @@ function __fbRestoreSpirits(spirits,saved) {
 
     if (skillBanTurns === 0) {
       rings.forEach((ring, i) => {
-        if (!ring) return;
+        if (!ring||i===6||(goldSkill(player,i,activeSoulSkillTab)&&goldSkillReady(player,bloodRef.current,i,activeSoulSkillTab))) return;
         const cost = getSkillCostFn(i);
         if (sp >= cost) {
           availableSkills.push({ index: i, ring, soulIndex: activeSoulSkillTab as 0 | 1 });
@@ -2884,7 +2899,7 @@ function __fbRestoreSpirits(spirits,saved) {
         </span>
       </header>
 
-         {(battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||bloodlineProgress(player).seals)&&__fbRef.current&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
+         {(battleType==='fierce-beast'||battleState?.meta?.abyss||battleState?.meta?.valley||hasGoldKing(player))&&__fbRef.current&&<div role="status" data-fierce-effects style={{whiteSpace:'pre-wrap',fontSize:12,padding:'6px 12px',color:'#b8edff',background:'#10233a'}}>{__fbStatus(__fbRef.current||battleState?.meta?.fierceEffects)||'凶兽技能机制已启用：'+enemy.name}</div>}
          {battleState?.meta?.shadow&&<div role="status" className="px-3 py-2 text-purple-300">轮回领域已展开：全属性 +{battleState.meta.shadow.lifeIndex*10}%，魂技伤害 +{battleState.meta.shadow.lifeIndex}%</div>}
          {/* 战斗主区域 - flex-1 占满剩余空间 */}
          <div className="flex-1 flex flex-col px-2 md:px-8 py-2 md:py-6 gap-2 md:gap-8 relative overflow-hidden min-h-0 w-full max-w-6xl mx-auto">
@@ -3680,7 +3695,7 @@ function __fbRestoreSpirits(spirits,saved) {
                     const color = ring ? RING_DISPLAY_COLOR[ring.color as keyof typeof RING_DISPLAY_COLOR] : undefined;
                     const isBlack = ring?.color === 'black';
                     // 🔴 修复：魂技名去掉「第X魂技·」前缀，避免与UI上的「第X魂技 · 」标签重复
-                    const pureSkillName = ring?.skillName?.replace(/^第\d+魂技·/, '') || '';
+                    const pureSkillName = goldSkill(player,i,0)?.name || ring?.skillName?.replace(/^第\d+魂技·/, '') || '';
                     const spCost = (i + 1) * 60;
                     let totalCost = spCost;
                      if (anyTrueBody) totalCost = Math.round(totalCost * 4);
@@ -3688,8 +3703,9 @@ function __fbRestoreSpirits(spirits,saved) {
                         if (secondDomainActive) totalCost = Math.round(totalCost * 2);
                      const spEnough = currentSoulPower >= totalCost;
                       const isTrueBodySlot = i === 6; // 主修第7魂技=武魂真身
-                      const isDisabled = !ring || phase !== 'playerTurn' || !spEnough || isTrueBodySlot || skillBanTurns > 0;
-                      const tipText = ring
+                      const goldReason=goldSkill(player,i,0)?goldSkillReady(player,bloodRef.current,i,0):'';
+                      const isDisabled = !!goldReason || !ring || phase !== 'playerTurn' || !spEnough || isTrueBodySlot || skillBanTurns > 0;
+                      const tipText = goldReason|| (ring
                         ? isTrueBodySlot
                           ? `第${order}魂技 · 武魂真身（点击下方真身按钮开关）`
                           : skillBanTurns > 0
@@ -3697,7 +3713,7 @@ function __fbRestoreSpirits(spirits,saved) {
                             : spEnough
                                 ? `第${order}魂技 · ${pureSkillName}（消耗 ${totalCost} 魂力）`
                               : `魂力不足（需要 ${totalCost}）`
-                        : `第${order}魂环（未获得）`;
+                        : `第${order}魂环（未获得）`);
                       return (
                         <button
                           key={`pri-${i}`}
@@ -3726,7 +3742,7 @@ function __fbRestoreSpirits(spirits,saved) {
                               style={{ backgroundColor: isBlack ? '#e5e7eb' : color, boxShadow: `0 0 4px ${isBlack ? '#d1d5db' : color}` }}
                             />
                                  <span className="truncate w-full text-center px-0.5 md:px-1 font-bold text-[10px] md:text-xs text-white drop-shadow">
-                                   {isTrueBodySlot ? '武魂真身' : pureSkillName}
+                                   {isTrueBodySlot ? (playerMartialSoul?.name==='金龙王'?pureSkillName:'武魂真身') : pureSkillName}
                                  </span>
                                 <span className="text-[8px] md:text-[10px] font-bold text-white/90 mt-0.5 md:mt-1 tabular-nums drop-shadow">{order}魂 · {totalCost}</span>
                           </>
@@ -3786,7 +3802,8 @@ function __fbRestoreSpirits(spirits,saved) {
                         if (secondDomainActive) totalCost = Math.round(totalCost * 2);
                        const spEnough = currentSoulPower >= totalCost;
                        const isTrueBodySlot = i === 6;
-                       const isDisabled = !ring || phase !== 'playerTurn' || !spEnough || isTrueBodySlot || skillBanTurns > 0;
+                       const goldReason=goldSkill(player,i,1)?goldSkillReady(player,bloodRef.current,i,1):'';
+                      const isDisabled = !!goldReason || !ring || phase !== 'playerTurn' || !spEnough || isTrueBodySlot || skillBanTurns > 0;
                        const tipText = ring
                          ? isTrueBodySlot
                            ? `第${order}魂技 · 第二武魂真身（点击下方真身按钮开关）`
@@ -3923,7 +3940,7 @@ function __fbRestoreSpirits(spirits,saved) {
                 setBattleState(prev=>prev?({...prev,meta:{...prev.meta,armorUsed:true}} as any):prev);
                 addLog('斗铠振奋：恢复最大气血3%，本次行动结束。','skill');scheduleEnemyAction(600);
               }}>斗铠振奋 · 每场一次 · 魂力 {Math.ceil(attrs.maxSoulPower*.1)}</button>}
-            {bloodlineProgress(player).seals>=3&&<div className="mb-2 rounded-xl border border-yellow-500/30 p-3 text-yellow-200" data-blood-skills><div className="text-xs mb-2">血脉技能 · 每次释放占用一次行动</div><div className="grid grid-cols-2 gap-2">{BLOOD_SKILLS.filter(k=>bloodlineProgress(player).seals>=k.seal).map(k=>{const r=bloodSkillAction(player,bloodRef.current,k.id,currentSoulPower,attrs.maxSoulPower);return <button key={k.id} className="rounded-lg p-2 border border-yellow-500/30 disabled:opacity-40" disabled={phase!=='playerTurn'||!!r.reason||skillBanTurns>0} onClick={()=>__useBloodSkill(k.id)}>{k.name} · 魂力 {r.cost}{r.reason?' · '+r.reason:''}</button>})}</div></div>}
+            {goldEvolutions(player).state>0&&<div className="mb-2 rounded-xl border border-yellow-500/30 p-3 text-yellow-200" data-blood-skills><div className="text-xs mb-2">特殊状态 · 本次不追加普通攻击</div><button className="rounded-lg p-2 border border-yellow-500/30 disabled:opacity-40" disabled={phase!=='playerTurn'||skillBanTurns>0||(bloodRef.current.cooldowns.transform||0)>bloodRef.current.turn||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={__useBloodTransform}>血龙变 · 魂力 {Math.ceil(attrs.maxSoulPower*.15)} · 冷却6次行动</button></div>}
             {/* 操作按钮行：固定4列对称布局 — 普攻 / 领域 / 二领域 / 逃跑 */}
             <div className="grid grid-cols-4 gap-2 md:gap-3 w-full">
                <ActionButton

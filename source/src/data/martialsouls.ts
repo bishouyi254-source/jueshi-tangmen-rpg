@@ -1,3 +1,4 @@
+import {GOLD_KING_BASE_SKILLS} from '../lib/goldKing';
 // EXPORTS: IMartialSoul, MOCK_MARTIAL_SOULS, generateSoulSkills, getSoulDepartment, getSoulElement, getCultivationAttr, CULTIVATION_ATTR_LABEL, evolveMartialSoul
 export interface IMartialSoul {
   id: string
@@ -86,6 +87,7 @@ export function getSoulDepartment(type: string): string {
 }
 
 export function generateSoulSkills(soul: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'>): string[] {
+  if(soul.name==='金龙王')return [...GOLD_KING_BASE_SKILLS];
   if(soul.customSoulSkills?.length===9)return [...soul.customSoulSkills];
   const customSkills={"曜金龙戟":["第1魂技·龙锋刺","第2魂技·曜金破阵","第3魂技·龙鳞斩","第4魂技·金戟裂空","第5魂技·百刃归锋","第6魂技·龙吟贯日","武魂真身","第8魂技·万锋镇天","第9魂技·曜金龙皇破"],"霜魄灵瞳":["第1魂技·霜瞳凝念","第2魂技·灵魄束缚","第3魂技·镜雪迷阵","第4魂技·寒念冲击","第5魂技·碎魄凝光","第6魂技·霜心灵域","武魂真身","第8魂技·万念归寂","第9魂技·霜魄神识之剑"],"虚空天隼":["第1魂技·隼影突袭","第2魂技·裂空双翼","第3魂技·虚空掠爪","第4魂技·流隙疾冲","第5魂技·千影锋羽","第6魂技·天隼空痕","武魂真身","第8魂技·万羽破界","第9魂技·虚空天隼神化"],"镇岳玄龟":["第1魂技·玄甲壁","第2魂技·镇岳盾","第3魂技·磐山墙","第4魂技·厚土玄甲","第5魂技·山岳屏障","第6魂技·玄龟圣盾","武魂真身","第8魂技·镇岳金身","第9魂技·万古玄龟盾"],"星露琉璃莲":["第1魂技·星露光矢","第2魂技·琉璃祝福","第3魂技·莲华冲击","第4魂技·星露庇护","第5魂技·青莲审判","第6魂技·琉璃神恩","武魂真身","第8魂技·星露绽放","第9魂技·琉璃莲华神罚"]}[soul.name];if(customSkills)return [...customSkills];
   const element = (soul.element && soul.element !== '无属性') ? soul.element : getSoulElement(soul.name)
@@ -193,6 +195,13 @@ const superDivineSouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAtt
 
 // === 至高神级（1%）两仪神剑——阴阳茶赐予的无上武魂 ===
 const supremeDivineSouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'>[] = [
+  {
+    name: '金龙王', quality: 'supremeDivine', type: '兽武魂·强攻系',
+    description: '本游戏改编的金龙王武魂：气血魂技随魂环解锁；十二封印将第一至第四魂技进化为龙皇禁法，十六封印将第五、第六、第八、第九魂技进化。血脉可培养爪部、身体、龙核和血龙变。第七、第九初始魂技为游戏原创。',
+    extremeAttribute: '极致之金', element:'金属性',
+    baseStats:{attack:125,defense:95,speed:90,spirit:85,hp:140},
+    customSoulSkills:[...GOLD_KING_BASE_SKILLS],
+  },
   {
     name: '两仪神剑', quality: 'supremeDivine', type: '器武魂·强攻系',
     description: '阴阳茶赐予的至高神级武魂，一剑两仪，阴阳轮转，化生万物。极致之金，锋锐无双。拥有者每突破一个大境界永久获得10%攻击力加成，首次击败阴阳茶可使所有魂环年限+100万年。',
@@ -856,6 +865,7 @@ const SOUL_ELEMENT_MAP: Record<string, string> = {
   '修罗之剑': '暗属性',
   '轮回之眼': '空间属性',
   '白银龙枪': '水属性',
+  '金龙王': '金属性',
   '黄金龙枪': '金属性',
   '命运之盘': '时间属性',
   '鸿蒙金乌': '火属性',

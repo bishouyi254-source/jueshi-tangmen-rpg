@@ -1,23 +1,25 @@
+import {GOLD_EVOLUTIONS,goldEvolutions} from './goldKing';
 import {STAMINA_CAP} from './growthBatch3';
-// No production unlock predicate has been chosen. Never infer one from level or resources.
-export const BLOODLINE_UNLOCK_CONDITION:null=null;
+// Unlock and use require the exact soul name. Stored flags cannot bypass this gate.
+export const BLOODLINE_UNLOCK_CONDITION={type:'martialSoul',name:'金龙王',slots:['main','secondary']} as const;
 const nat=(n:any)=>Number.isFinite(n)?Math.max(0,Math.floor(n)):0;
-export type BloodlineProgress={version:1;unlocked:boolean;seals:number;essence:number;marrow:number;core:number};
-export function bloodlineProgress(p:any):BloodlineProgress{const d=p?.dragonBloodline||{},unlocked=d.unlocked===true;return {version:1,unlocked,seals:unlocked?Math.min(18,nat(d.seals)):0,essence:nat(d.essence),marrow:nat(d.marrow),core:nat(d.core)};}
-export function bloodlineUnlockEligible(_p:any){return false;}
-export function bloodlineBonuses(p:any){const d=bloodlineProgress(p);return {attack:d.seals*.01,hp:d.seals*.015};}
+export type BloodlineProgress={version:1;unlocked:boolean;seals:number;essence:number;marrow:number;core:number;evolutions?:Record<string,number>};
+export function bloodlineProgress(p:any):BloodlineProgress{const d=p?.dragonBloodline||{},unlocked=bloodlineUnlockEligible(p);return {version:1,unlocked,seals:unlocked?Math.min(18,nat(d.seals)):0,essence:nat(d.essence),marrow:nat(d.marrow),core:nat(d.core),evolutions:goldEvolutions(p)};}
+export function bloodlineUnlockEligible(p:any){return p?.martialSoul?.name===BLOODLINE_UNLOCK_CONDITION.name||(p?.isTwinSoul===true&&p?.secondSoul?.name===BLOODLINE_UNLOCK_CONDITION.name);}
+export function bloodlineBonuses(p:any){const d=bloodlineProgress(p);const e=goldEvolutions(p);return {attack:d.seals*.01+e.claw*.02,hp:d.seals*.015+e.body*.02,defense:e.body*.02,speed:e.body*.02,mana:e.core*.03,skill:e.claw*.01,penetration:e.claw*.05,manaRegen:e.core*.005};}
 export const SEAL_LEVELS=[60,70,80,90,95,99,105,110,120,125,130,139,140,149,150,159,160,169];
 export const BLOOD_SKILLS=[{id:'claw',name:'黄金龙爪',seal:3,cost:.08,cooldown:2,pct:3,desc:'攻击力×4，冷却2次行动'}, {id:'body',name:'黄金龙体',seal:6,cost:.1,cooldown:4,pct:0,desc:'4%气血护盾，总护盾不超过6%，冷却4次行动'}, {id:'roar',name:'黄金龙吼',seal:12,cost:.12,cooldown:4,pct:2,desc:'攻击力×3，30%概率眩晕1次行动，冷却4次行动'}, {id:'dominion',name:'金龙霸体',seal:18,cost:.15,cooldown:6,pct:0,desc:'两次敌方行动内，直接伤害降低20%；冷却6次行动'}];
-export function sealRequirements(p:any){const d=bloodlineProgress(p),next=d.seals+1,level=SEAL_LEVELS[next-1]||169,essence=next*10,marrow=next>6?(next-6)*2:0,core=next>12?next-12:0;let reason=!d.unlocked?'彩蛋尚未解锁；解锁条件待定':next>18?'18道封印已全部解开':p.level<level?'需要'+level+'级':next>6&&!p.divineTrial?.inherited?'需要继承神位':d.essence<essence||d.marrow<marrow||d.core<core?'血脉材料不足':'';return {next,level,essence,marrow,core,reason};}
+export function sealRequirements(p:any){const d=bloodlineProgress(p),next=d.seals+1,level=SEAL_LEVELS[next-1]||169,essence=next*10,marrow=next>6?(next-6)*2:0,core=next>12?next-12:0;let reason=!d.unlocked?'需要持有金龙王武魂（主修或有效次修）':next>18?'18道封印已全部解开':p.level<level?'需要'+level+'级':next>6&&!p.divineTrial?.inherited?'需要继承神位':d.essence<essence||d.marrow<marrow||d.core<core?'血脉材料不足':'';return {next,level,essence,marrow,core,reason};}
 export const VALLEY_ZONES=[{name:'龙谷外围',level:60,desc:'龙魂碎片与基础试炼'}, {name:'龙魂秘境',level:100,desc:'神位后的龙髓与精英试炼'}, {name:'龙骸圣地',level:140,desc:'高级神位的龙核与龙骸守卫'}];
 export const VALLEY_NODES=VALLEY_ZONES.flatMap((z,zone)=>['龙魂斥候','遗迹守卫','龙骸领主'].map((name,rank)=>({id:'valley-'+zone+'-'+rank,name:z.name+'·'+name,zone,rank,attr:rank===0?'attack':'spirit',mechanic:rank===0?'撕裂':rank===1?'护盾':'治疗与龙威',rules:rank===0?{1:{target:[{id:'bleed',type:'dot',label:'龙爪撕裂',scale:.3,turns:2,negative:true}]},2:{},3:{}}:rank===1?{1:{},2:{nonDamage:true,shield:.04},3:{}}:{1:{},2:{nonDamage:true,heal:.03},3:{target:[{id:'stun',type:'stun',label:'龙威眩晕',chance:.25,turns:1,negative:true}]}}})));
 export type ValleyProgress={version:1;cleared:string[];codex:string[];exploration:null|{id:string;node:string;stage:'choice'|'ready'|'battle'};trial:null|{id:string;node:string;seal:number;claimed:boolean}};
 export function valleyProgress(p:any):ValleyProgress{const d=p?.dragonValley||{},valid=(id:any)=>VALLEY_NODES.some(n=>n.id===id),ids=(a:any)=>Array.isArray(a)?[...new Set(a.filter(valid))] as string[]:[];const e=d.exploration,t=d.trial;return {version:1,cleared:ids(d.cleared),codex:ids(d.codex),exploration:e&&typeof e.id==='string'&&valid(e.node)&&['choice','ready','battle'].includes(e.stage)?{id:e.id,node:e.node,stage:e.stage}:null,trial:t&&typeof t.id==='string'&&valid(t.node)&&Number.isInteger(t.seal)&&t.seal>=0&&t.seal<=18?{id:t.id,node:t.node,seal:t.seal,claimed:t.claimed===true}:null};}
 export function valleyReward(nodeId:string,first:boolean){const n=VALLEY_NODES.find(n=>n.id===nodeId);if(!n)return {essence:0,marrow:0,core:0};return {essence:(n.zone+1)*(n.rank+1)*5+(first?10:0),marrow:n.zone>=1?n.rank+1:0,core:n.zone===2&&n.rank===2?1:0};}
 export function valleyRequirements(p:any,nodeId:string){const n=VALLEY_NODES.find(n=>n.id===nodeId),d=valleyProgress(p);return !n?'无效龙谷节点':p.level<VALLEY_ZONES[n.zone].level?'需要'+VALLEY_ZONES[n.zone].level+'级':n.zone>0&&!p.divineTrial?.inherited?'需要继承神位':n.rank>0&&!d.cleared.includes('valley-'+n.zone+'-'+(n.rank-1))?'先通关本区上一节点':'';}
+export function evolutionRequirements(p:any,id:string){const b=bloodlineProgress(p),e=GOLD_EVOLUTIONS.find(e=>e.id===id),next=(goldEvolutions(p)[id]||0)+1,seal=[2,6,12,16][next-1]||18,essence=20*next,marrow=next>1?2*(next-1):0,core=next>=4?1:0;const reason=!e?'无效血脉路线':!b.unlocked?'需要持有金龙王武魂':next>4?'该路线已完全进化':b.seals<seal?'需要解开第'+seal+'道封印':b.essence<essence||b.marrow<marrow||b.core<core?'血脉材料不足':'';return {reason,next,seal,essence,marrow,core};}
 export function valleyAction(p:any,a:any,now=Date.now()){
  const fail=(reason:string)=>({player:p,reason,message:''});if(!p)return fail('请先进入角色');const v=valleyProgress(p),b=bloodlineProgress(p);let stamina=nat(p.stamina),coins=nat(p.soulCoins),abyss=p.abyssFrontier,message='操作成功';
- if(a.type==='unlock')return fail('解锁条件尚未设定');
+ if(a.type==='unlock')return fail('系统根据金龙王武魂自动判定，无需手动解锁');
  if(a.type==='explore'){
   if(v.trial||v.exploration)return fail('请先结束当前探索');const reason=valleyRequirements(p,a.node);if(reason)return fail(reason);if(typeof a.id!=='string'||!a.id)return fail('探索编号无效');const n=VALLEY_NODES.find(n=>n.id===a.node)!;const cost=40*(n.zone+1),fee=500*(n.zone+1);stamina=Math.min(STAMINA_CAP,stamina+Math.max(0,Math.floor((now-(p.staminaUpdatedAt||now))/1000))*100);if(stamina<cost||coins<fee)return fail('体力或魂币不足');stamina-=cost;coins-=fee;v.exploration={id:a.id,node:a.node,stage:'choice'};message='发现龙谷遗迹，请选择探索事件';
  }else if(a.type==='choice'){
@@ -30,6 +32,8 @@ export function valleyAction(p:any,a:any,now=Date.now()){
   const t=v.trial;if(!t||t.id!==a.id||t.claimed)return fail('本次战斗已结算或不存在');if(t.seal){const r=sealRequirements(p);if(r.reason||r.next!==t.seal)return fail(r.reason||'封印进度不匹配');b.essence-=r.essence;b.marrow-=r.marrow;b.core-=r.core;b.seals=t.seal;message='第'+t.seal+'道封印已解开';}else{const first=!v.cleared.includes(t.node),r=valleyReward(t.node,first);b.essence+=r.essence;b.marrow+=r.marrow;b.core+=r.core;if(first)v.cleared.push(t.node);if(!v.codex.includes(t.node))v.codex.push(t.node);message='龙谷胜利：精华 +'+r.essence+'，龙髓 +'+r.marrow+'，龙核 +'+r.core;}t.claimed=true;
  }else if(a.type==='leave'){
   if(v.trial?.id!==a.id&&v.exploration?.id!==a.id)return fail('当前探索已结束');v.trial=null;v.exploration=null;message='龙谷探索结束';
+ }else if(a.type==='evolve'){
+  if(v.trial||v.exploration)return fail('探索或试炼中不能进化');const r=evolutionRequirements(p,a.track);if(r.reason)return fail(r.reason);b.essence-=r.essence;b.marrow-=r.marrow;b.core-=r.core;b.evolutions={...goldEvolutions(p),[a.track]:r.next};message=GOLD_EVOLUTIONS.find(e=>e.id===a.track)!.name+'进化至第'+r.next+'阶';
  }else if(a.type==='exchange'){
   if(v.trial||v.exploration)return fail('探索中不能兑换');if(nat(abyss?.merit)<60)return fail('军功不足');abyss={...abyss,merit:abyss.merit-60};b.essence+=5;message='60军功兑换龙魂精华 ×5';
  }else return fail('未知操作');
@@ -38,5 +42,5 @@ export function valleyAction(p:any,a:any,now=Date.now()){
 export function valleyEnemy(nodeId:string,seal=0){const n=VALLEY_NODES.find(n=>n.id===nodeId);if(!n)throw Error('无效龙谷敌人');const scale=(n.rank+1)*(seal?1+seal/6:1),god=n.zone>0;return {id:n.id,name:seal?'第'+seal+'封印·龙魂守卫':n.name,years:0,qualityLabel:seal?'封印试炼':'龙谷试炼',qualityColor:'#facc15',hp:Math.round((god?2e15:2e7)*(n.zone===2?10:1)*scale),attack:Math.round((god?2e10:10000)*scale),defense:Math.round((god?2e7:20000)*scale),speed:god?2e5:2000,spirit:Math.round((god?3e10:20000)*scale),element:'金属性',skillName:n.mechanic,skillDesc:n.mechanic};}
 export function reincarnateBloodline(p:any){return {...bloodlineProgress(null),unlocked:bloodlineProgress(p).unlocked};}
 export function reincarnateValley(p:any){const d=valleyProgress(p);return {...valleyProgress(null),cleared:d.cleared,codex:d.codex};}
-export function readBloodBattle(raw:any){return {turn:nat(raw?.turn),cooldowns:Object.fromEntries(BLOOD_SKILLS.map(s=>[s.id,nat(raw?.cooldowns?.[s.id])]))};}
+export function readBloodBattle(raw:any){return {turn:nat(raw?.turn),cooldowns:Object.fromEntries([...BLOOD_SKILLS.map(s=>s.id),'transform',...Array.from({length:18},(_,i)=>'gold:'+Math.floor(i/9)+':'+i%9)].map(id=>[id,nat(raw?.cooldowns?.[id])]))};}
 export function bloodSkillAction(p:any,raw:any,id:string,mana:number,maxMana:number){const d=bloodlineProgress(p),state=readBloodBattle(raw),s=BLOOD_SKILLS.find(s=>s.id===id),cost=Math.ceil(maxMana*(s?.cost||0));const reason=!s?'无效血脉技能':!d.unlocked||d.seals<s.seal?'血脉技能未解锁':state.cooldowns[id]>state.turn?'血脉技能冷却中':mana<cost?'魂力不足':'';return {reason,cost,skill:s,state:reason?state:{...state,cooldowns:{...state.cooldowns,[id]:state.turn+s!.cooldown+1}}};}

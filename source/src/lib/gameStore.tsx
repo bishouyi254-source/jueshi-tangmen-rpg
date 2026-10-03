@@ -1,3 +1,4 @@
+import {normalizeGoldKing} from './goldKing';
 import {bloodlineProgress,valleyProgress,bloodlineBonuses,valleyAction,reincarnateBloodline,reincarnateValley} from './dragonBloodline';
 import {abyssProgress,abyssAction,reincarnateAbyss} from './abyssFrontier';
 import { STAMINA_CAP, godLevelExp, freshGrowthRules, migrateGrowthRules, godBreakthroughError, applyGodBreakthrough, type GrowthRules } from '@/lib/growthBatch3';
@@ -2304,7 +2305,7 @@ export function calcAttributes(player: IPlayer): IAttrs {
       allAttrPct = Math.max(-0.9, allAttrPct - 0.8); // 下界保护：虚弱状态最多-80%
    }
 
-    const bloodBonus=bloodlineBonuses(player);attack*=1+bloodBonus.attack;hp*=1+bloodBonus.hp;
+    const bloodBonus=bloodlineBonuses(player);attack*=1+bloodBonus.attack;hp*=1+bloodBonus.hp;defense*=1+bloodBonus.defense;speed*=1+bloodBonus.speed;maxSoulPower=Math.max(1,Math.round(maxSoulPower*(1+bloodBonus.mana)));
     const armorBonus=armorBonuses(player);
     attack*=1+armorBonus.attack;defense*=1+armorBonus.defense;speed*=1+armorBonus.speed;spirit*=1+armorBonus.spirit;hp*=1+armorBonus.hp;
     // 取最终常驻精神，转换一次；不重新进入属性倍率计算。
@@ -3984,7 +3985,8 @@ interface GameContextValue {
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [player, setPlayerState] = useState<IPlayer | null>(null);
+  const [player, rawSetPlayerState] = useState<IPlayer | null>(null);
+  const setPlayerState=useCallback((update:any)=>rawSetPlayerState(prev=>normalizeGoldKing(typeof update==='function'?update(prev):update)),[]);
   const [hasSave, setHasSave] = useState(false);
   const [loading, setLoading] = useState(true);
   const [inBattle, setInBattle] = useState(false);
@@ -4045,7 +4047,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           finalData = { ...finalData, secondSoulRings: secRefresh.rings };
         }
       }
-       const saveData = { ...finalData, saveVersion: SAVE_VERSION };
+       const saveData = { ...normalizeGoldKing(finalData), saveVersion: SAVE_VERSION };
        const jsonStr = JSON.stringify(saveData);
        // 写入重试：最多 3 次，每次走 safeWriteWithChecksum（带完整性校验 + scopedStorage + 原生 localStorage 双写）
        let saved = false;
@@ -6392,7 +6394,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
        if (!prev) return prev;
        const nextRaw = updater(prev);
        // 成就检测：每次状态变更后检查新解锁成就
-       const next = checkAchievements(prev, nextRaw);
+       const next = normalizeGoldKing(checkAchievements(prev, nextRaw));
        // 节流写入：连续操作合并为一次 localStorage IO
        scheduleSave(next);
        return next;
