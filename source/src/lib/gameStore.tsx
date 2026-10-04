@@ -709,6 +709,7 @@ function getDomainMultiplier(level: number): number {
 
 // 玩家数据
 export interface IPlayer {
+  dragonRewards?: string[];
   twinResonance?: ReturnType<typeof readTwin>;
   twinAutoBreak?: boolean;
   goldBlood?: ReturnType<typeof readGoldBlood>;

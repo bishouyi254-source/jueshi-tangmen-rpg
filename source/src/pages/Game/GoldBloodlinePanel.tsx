@@ -1,3 +1,4 @@
+import {MaterialSources,useCultivationView} from './MaterialSources';
 import GoldSealProgress from './GoldSealProgress';
 import {GrowthPreview,useGrowthUpgrade,growthStyles} from './BloodlineGrowth';
 import GoldForbiddenFigure from './GoldForbiddenFigure';
@@ -10,14 +11,14 @@ import {hasGoldKing,GOLD_EVOLUTIONS,goldEvolutions} from '@/lib/goldKing';
 import {valleyProgress,valleyAction,valleyEnemy,bloodlineProgress,sealRequirements,evolutionRequirements} from '@/lib/dragonBloodline';
 const sealStyles=`.gold-seal-art{margin:12px -16px 16px;overflow:hidden;border-top:1px solid rgba(217,168,67,.25);border-bottom:1px solid rgba(217,168,67,.25);background:#061423}.gold-seal-art img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain}.gold-seal-art figcaption{padding:8px 16px;color:#fcd34d;font-size:12px;text-align:center;background:rgba(8,20,31,.9)}@media(min-width:768px){.gold-seal-art{width:min(calc(100% + 32px),640px);margin:12px auto 16px;border:1px solid rgba(217,168,67,.25);border-radius:10px}}`;
 export default function GoldBloodlinePanel({onBack}:{onBack:()=>void}){
- const [view,setView]=useState<'seals'|'body'|'forbidden'>('seals');
+ const [view,setView]=useCultivationView<'seals'|'body'|'forbidden'>('gold-view','seals');
  const {player,inBattle,setPlayer,startBattle}=useGame(),gate=useRef(false);const growth=useGrowthUpgrade(player,setPlayer,inBattle);useEffect(()=>{if(!inBattle)gate.current=false;},[inBattle]);if(!player)return null;
  const d=valleyProgress(player),b=bloodlineProgress(player),req=sealRequirements(player),blood=goldBloodBonuses(player);
  function act(a:any){if(inBattle)return;const now=Date.now(),r=valleyAction(player,a,now);if(r.reason)return toast.error(r.reason);setPlayer(p=>valleyAction(p,a,now).player);toast.success(r.message);}
  function fight(){if(inBattle||gate.current||!hasGoldKing(player))return;gate.current=true;const a={type:'seal',id:crypto.randomUUID()},r=valleyAction(player,a);if(r.reason){gate.current=false;return toast.error(r.reason);}const t=r.player.dragonValley.trial;setPlayer(p=>valleyAction(p,a).player);startBattle({battleType:'challenge',locationId:'dragon-valley',enemy:valleyEnemy(t.node,t.seal),meta:{valley:{...t}}} as any);}
  if(!hasGoldKing(player))return <section className="dragon-ui" data-gold-bloodline><style>{dragonStyles+sealStyles+growthStyles}</style><button className="dragon-quiet" onClick={onBack}>← 返回</button><p className="dragon-muted">需要主修或有效次修武魂为金龙王。</p></section>;
  return <section className="dragon-ui" data-gold-bloodline><style>{dragonStyles+sealStyles+growthStyles}</style><div className="dragon-summary"><button className="dragon-quiet" onClick={onBack}>← 返回</button><span className="dragon-pill">精华 {b.essence} · 龙髓 {b.marrow} · 龙核 {b.core}</span></div><p className="dragon-hint">血脉材料可在地图中的龙谷获取。升级前可查看当前收益与下一阶收益。</p>
- {d.exploration&&<p className="dragon-warning">请先完成或结束龙谷探索，再进行封印挑战与进化。</p>}
+ <MaterialSources player={player} cost={view==='seals'?req:undefined}/>{d.exploration&&<p className="dragon-warning">请先完成或结束龙谷探索，再进行封印挑战与进化。</p>}
  {d.trial&&!d.exploration&&<div className="dragon-warning">存在未结束的封印试炼<button className="dragon-quiet" disabled={inBattle} onClick={()=>act({type:'leave',id:d.trial.id})}>放弃封印试炼</button></div>}
   <div className="dragon-tabs" role="tablist" aria-label="金龙王血脉功能">{([['seals','十八道封印'],['body','金龙真身'],['forbidden','龙皇禁法']] as const).map(([id,label])=><button type="button" role="tab" id={'gold-tab-'+id} aria-controls={'gold-panel-'+id} aria-selected={view===id} key={id} className={view===id?'active':''} onClick={()=>setView(id)}>{label}</button>)}</div>
   <div role="tabpanel" id={'gold-panel-'+view} aria-labelledby={'gold-tab-'+view}>

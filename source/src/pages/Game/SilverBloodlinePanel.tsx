@@ -1,3 +1,4 @@
+import {useCultivationView} from './MaterialSources';
 import {trueBodyPreview} from '@/lib/bloodlinePreview';
 import {GrowthPreview,useGrowthUpgrade,growthStyles} from './BloodlineGrowth';
 import {useState} from 'react';
@@ -14,7 +15,7 @@ function SilverFigure({player,view,selected,onSelect}:{player:any;view:string;se
  return <div className="silver-figure" data-silver-figure={view}><svg viewBox="0 0 1000 1400" aria-hidden="true"><image href={asset} x={view==='body'?235:250} y={view==='body'?230:300} width={view==='body'?530:500} height={view==='body'?980:850} preserveAspectRatio="xMidYMid meet" onError={()=>setFailed(true)}/>{positions.map((n,i)=><g key={n.id} data-silver-connection={n.id}><path d={`M ${n.x} ${n.y} L ${n.x+(500-n.x)*.35} ${n.y} L ${n.ax} ${n.ay}`} fill="none" stroke={selected===i?'#67e8f9':n.ready?'#8ebacb':'#476071'} strokeWidth={selected===i?2:1} vectorEffect="non-scaling-stroke"/><circle cx={n.ax} cy={n.ay} r={selected===i?6:4} fill="#08141f" stroke="#b8edff"/></g>)}</svg>{failed&&<div className="silver-failure">图片暂未加载，功能仍可使用。</div>}{positions.map((n,i)=><button type="button" key={n.id} className="silver-node" style={{left:n.x/10+'%',top:n.y/14+'%'}} aria-pressed={selected===i} aria-controls={'silver-detail-'+view} onClick={()=>onSelect(i)}><small>{view==='skills'?'第'+names[i]+'魂技':''}</small><strong>{n.label}</strong><small>{n.status}</small></button>)}</div>;
 }
 export default function SilverBloodlinePanel({onBack}:{onBack:()=>void}){
- const {player,setPlayer,inBattle}=useGame(),[view,setView]=useState('elements'),[selected,setSelected]=useState(0);const growth=useGrowthUpgrade(player,setPlayer,inBattle);if(!player)return null;
+ const {player,setPlayer,inBattle}=useGame(),[view,setView]=useCultivationView('silver-view','elements'),[selected,setSelected]=useCultivationView('silver-selected',0);const growth=useGrowthUpgrade(player,setPlayer,inBattle);if(!player)return null;
  const r=silverRanks(player),d=silverDomain(player),bag=player.dragonBloodline||{},bonus=silverBonuses(player),mastered=Object.values(r.elements).filter(n=>n>0).length;
 
  const kind=view==='elements'?'elements':'body',id=view==='elements'?SILVER_ELEMENTS[selected]:SILVER_BODY[selected]?.id,req=view==='skills'?null:silverRequirement(player,kind,id),soulIndex=player.martialSoul?.name==='银龙王'?0:1,skill=view==='skills'?silverSkill(player,selected,soulIndex):null;

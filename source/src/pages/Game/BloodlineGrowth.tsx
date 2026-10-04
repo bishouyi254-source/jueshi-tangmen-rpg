@@ -1,3 +1,6 @@
+import {MaterialSources} from './MaterialSources';
+import {evolutionRequirements} from '@/lib/dragonBloodline';
+import {silverRequirement} from '@/lib/silverKing';
 import {useEffect,useRef,useState} from 'react';
 import {toast} from 'sonner';
 import {growthBenefit,growthRank} from '@/lib/bloodlinePreview';
@@ -17,6 +20,6 @@ export function useGrowthUpgrade(player:any,setPlayer:any,inBattle:boolean){
 }
 export function GrowthPreview({player,king,kind,id}:{player:any;king:'gold'|'silver';kind:string;id:string}){
  const stored=growthRank(player,king,kind,id,true),rank=growthRank(player,king,kind,id);
- return <div data-growth-preview={king+'-'+id}><p className="dragon-hint">已培养 {stored}/4阶 · 当前生效 {rank}/4阶</p><p className="dragon-hint">当前：{growthBenefit(king,kind,id,rank)}</p>{stored<4?<p className="dragon-hint">升级后：{growthBenefit(king,kind,id,stored+1)}</p>:<p className="dragon-muted">已达最高阶，无需继续消耗材料。</p>}{stored!==rank&&<p className="dragon-warning">培养记录仍在；满足当前等级、神位或封印要求后才能完整生效。</p>}</div>;
+ return <div data-growth-preview={king+'-'+id}><p className="dragon-hint">已培养 {stored}/4阶 · 当前生效 {rank}/4阶</p><p className="dragon-hint">当前：{growthBenefit(king,kind,id,rank)}</p>{stored<4?<p className="dragon-hint">升级后：{growthBenefit(king,kind,id,stored+1)}</p>:<p className="dragon-muted">已达最高阶，无需继续消耗材料。</p>}{stored<4&&<MaterialSources player={player} cost={king==='gold'?evolutionRequirements(player,id):silverRequirement(player,kind as any,id)}/>} {stored!==rank&&<p className="dragon-warning">培养记录仍在；满足当前等级、神位或封印要求后才能完整生效。</p>}</div>;
 }
 export const growthStyles=`[data-growth-preview]{padding:10px 12px;margin:10px 0;border:1px solid #23465a;border-radius:8px;background:#08141f88}[data-growth-preview] p{margin:4px 0}.growth-seals{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:12px 0}.growth-seals button{padding:8px 2px;min-height:44px;color:#94a3b8;background:#08141f;border:1px solid #23465a;border-radius:6px;font:inherit;font-size:12px}.growth-seals button[data-state=unlocked]{color:#fcd34d;border-color:#967e40}.growth-seals button[data-state=ready]{color:#67e8f9;border-color:#67e8f9}.growth-seals button[aria-pressed=true]{outline:2px solid #67e8f9}.growth-seal-preview{border:1px solid #23465a;padding:12px;border-radius:8px}.gold-forbidden-node strong,.silver-node strong{white-space:normal!important;overflow-wrap:anywhere;line-height:1.25}.gold-forbidden-node,.silver-node{max-width:24%;min-width:0}.dragon-ui progress{max-width:100%}@media(max-width:400px){.growth-seals{grid-template-columns:repeat(6,minmax(0,1fr))}.silver-node,.gold-forbidden-node{font-size:10px!important}}`;

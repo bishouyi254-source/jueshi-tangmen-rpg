@@ -1,3 +1,4 @@
+import {AscensionCultivationRewards} from './MaterialSources';
 import {useState,useRef,useEffect} from 'react';
 import {useGame} from '@/lib/gameStore';
 import {dragonProgress,dragonAction,ARMOR_PARTS,TRIALS,EVOLUTIONS,armorTier,armorBonuses,spiritEvolution} from '@/lib/dragonLegend';
@@ -7,14 +8,14 @@ import ArmorSetProgress from './ArmorSetProgress';
 import ArmorFigure from './ArmorFigure';
 import AscensionTower from './AscensionTower';
 export default function DragonLegendPanel({mode}:{mode:'ascension'|'forge'}){
- const {player,attributes,setPlayer,inBattle,setBattleState,setInBattle}=useGame();
+ const {player,attributes,setPlayer,inBattle,startBattle}=useGame();
  const [selected,setSelected]=useState(''),[name,setName]=useState(''),[style,setStyle]=useState('attack');const [view,setView]=useState('main');const gate=useRef(false);
  useEffect(()=>setView('main'),[mode]);
  useEffect(()=>{if(!inBattle)gate.current=false;},[inBattle]);
  useEffect(()=>{const d=dragonProgress(player);setName(d.name);setStyle(d.style);},[player?.dragonLegend?.name,player?.dragonLegend?.style]);
  if(!player||!attributes)return null;const d=dragonProgress(player),tier=armorTier(player),spirit=player.soulSpirits?.find(s=>s.spiritId===(selected||player.soulSpirits?.[0]?.spiritId)),stage=spiritEvolution(spirit),target=EVOLUTIONS[stage];
  function act(a:any){if(inBattle)return toast.error('战斗中不能操作');const now=Date.now(),preview=dragonAction(player,a,now);if(preview.reason)return toast.error(preview.reason);setPlayer(p=>dragonAction(p,a,now).player);toast.success(preview.message);}
- function enter(i:number){if(gate.current||inBattle)return;gate.current=true;const id=crypto.randomUUID(),now=Date.now(),action={type:'enter',tier:i,id},r=dragonAction(player,action,now);if(r.reason){gate.current=false;return toast.error(r.reason);}const t=TRIALS[i];setPlayer(p=>dragonAction(p,action,now).player);setBattleState({battleType:'challenge',locationId:'ascension-platform',enemy:{id:'ascension-'+id,name:t.name+'·守卫',years:1000*(i+1),hp:Math.max(100,Math.round(attributes.hp*t.scale)),maxHp:Math.max(100,Math.round(attributes.hp*t.scale)),attack:Math.max(1,Math.round(attributes.attack*t.scale*.35)),defense:Math.max(1,Math.round(attributes.defense*t.scale*.25)),speed:Math.max(1,Math.round(attributes.speed*t.scale*.7)),spirit:Math.max(1,Math.round(attributes.spirit*t.scale*.35)),element:spirit?.attribute||'精神属性',skillName:'灵力冲击',skillDesc:'升灵台虚拟守卫的冲击'},phase:'playerTurn',logs:[],updatedAt:now,meta:{ascension:{id,tier:i,reward:t.reward}}} as any);setInBattle(true);}
+ function enter(i:number){if(gate.current||inBattle)return;gate.current=true;const id=crypto.randomUUID(),now=Date.now(),action={type:'enter',tier:i,id},r=dragonAction(player,action,now);if(r.reason){gate.current=false;return toast.error(r.reason);}const t=TRIALS[i];setPlayer(p=>dragonAction(p,action,now).player);startBattle({battleType:'challenge',locationId:'ascension-platform',enemy:{id:'ascension-'+id,name:t.name+'·守卫',years:1000*(i+1),hp:Math.max(100,Math.round(attributes.hp*t.scale)),maxHp:Math.max(100,Math.round(attributes.hp*t.scale)),attack:Math.max(1,Math.round(attributes.attack*t.scale*.35)),defense:Math.max(1,Math.round(attributes.defense*t.scale*.25)),speed:Math.max(1,Math.round(attributes.speed*t.scale*.7)),spirit:Math.max(1,Math.round(attributes.spirit*t.scale*.35)),element:spirit?.attribute||'精神属性',skillName:'灵力冲击',skillDesc:'升灵台虚拟守卫的冲击'},phase:'playerTurn',logs:[],updatedAt:now,meta:{ascension:{id,tier:i,reward:t.reward}}} as any);}
  const fmt=(n:number)=>n.toLocaleString();
  return <section className="dragon-ui" data-dragon-legend={mode}>
  <style>{dragonStyles}</style>
@@ -23,7 +24,7 @@ export default function DragonLegendPanel({mode}:{mode:'ascension'|'forge'}){
  {mode==='ascension'?<>
  {view!=='evolve'?<>
  {d.trial&&!d.trial.claimed&&<div className="dragon-warning">存在未结束的试炼<button className="dragon-quiet" onClick={()=>act({type:'leave',id:d.trial.id})}>放弃未结束的试炼</button></div>}
- <AscensionTower player={player} hasSpirit={!!spirit} inBattle={inBattle} onEnter={enter}/>
+ <AscensionCultivationRewards player={player}/><AscensionTower player={player} hasSpirit={!!spirit} inBattle={inBattle} onEnter={enter}/>
  <p className="dragon-hint">选择试炼获取灵力，再前往“魂灵进化”培养已契约魂灵。</p>
  </>:<div className="dragon-card"><div className="dragon-section-title"><span>魂灵进化</span><span className="dragon-muted">灵力 {fmt(d.lingli)}</span></div><label className="dragon-field">培养魂灵<select aria-label="培养魂灵" value={spirit?.spiritId||''} onChange={e=>setSelected(e.target.value)}><option value="">选择已契约魂灵</option>{player.soulSpirits?.map(s=><option key={s.spiritId} value={s.spiritId}>{s.name}</option>)}</select></label>
  {spirit?<><div className="dragon-spirit"><div className="dragon-emblem">{spirit.iconChar||'灵'}</div><div><h3>{spirit.name}</h3><p className="dragon-muted">{spirit.attribute} · {stage?EVOLUTIONS[stage-1].name:'未升灵'}</p></div><strong className="dragon-green">+{stage*10}%</strong></div><div className="dragon-stages">{EVOLUTIONS.map((e,i)=><span key={e.name} className={i<stage?'reached':''}>{e.name}</span>)}</div><div className="dragon-row"><span>下一阶段</span><b>{target?target.name:'已达上限'}</b></div><div className="dragon-row"><span>所需灵力</span><b className={target&&d.lingli<target.cost?'dragon-red':'dragon-gold'}>{target?fmt(target.cost):'—'}</b></div><button className="dragon-primary" disabled={!target||d.lingli<(target?.cost||0)} onClick={()=>act({type:'evolve',id:spirit.spiritId})}>{target?'进化为'+target.name+' · '+fmt(target.cost)+'灵力':'已达百万年上限'}</button><p className="dragon-hint">提升魂灵自身战斗属性与上阵贡献，保留属性和境界。</p></>:<div className="dragon-empty">尚未契约普通魂灵<p>前往传灵塔获取契约机会</p></div>}</div>}

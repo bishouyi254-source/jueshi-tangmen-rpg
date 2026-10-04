@@ -247,6 +247,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
   const [enemyMaxHp, setEnemyMaxHp] = useState(battleState?.enemy?.maxHp ?? 100);
   const [logs, setLogs] = useState<LogEntry[]>([]);
    const [rewards, setRewards] = useState<{
+     cultivation?: string;
      exp: number;
      coins: number;
      items: IItem[];
@@ -2230,9 +2231,9 @@ function __fbRestoreSpirits(spirits,saved) {
         clearTimeout(secondDomainAnimTimerRef.current);
         secondDomainAnimTimerRef.current = null;
       }
-       if(battleState?.meta?.valley){const t=battleState.meta.valley,r=valleyAction(player,{type:'win',id:t.id});setPlayer(p=>valleyAction(p,{type:'win',id:t.id}).player);addLog(r.reason||r.message,'system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
+       if(battleState?.meta?.valley){const t=battleState.meta.valley,r=valleyAction(player,{type:'win',id:t.id});setPlayer(p=>valleyAction(p,{type:'win',id:t.id}).player);addLog(r.reason||r.message,'system');setBattleState(s=>s?{...s,meta:{...s.meta,cultivationReward:r.reason||r.message}}:s);setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0,cultivation:r.reason||r.message});setVictoryStep('summary');setPhase('victory');return;}
        if(battleState?.meta?.abyss){const t=battleState.meta.abyss;const result=abyssAction(player,{type:'win',id:t.id});setPlayer(p=>abyssAction(p,{type:'win',id:t.id}).player);addLog(result.message||'深渊战斗已结算','system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
-       if((battleState?.meta as any)?.ascension){const trial=(battleState.meta as any).ascension;setPlayer(p=>dragonAction(p,{type:'win',id:trial.id}).player);addLog('升灵台试炼成功，灵力 +'+trial.reward,'system');setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0});setVictoryStep('summary');setPhase('victory');return;}
+       if((battleState?.meta as any)?.ascension){const trial=(battleState.meta as any).ascension;const r=dragonAction(player,{type:'win',id:trial.id});setPlayer(p=>dragonAction(p,{type:'win',id:trial.id}).player);addLog(r.reason||r.message||'升灵台结算完成','system');setBattleState(s=>s?{...s,meta:{...s.meta,cultivationReward:r.reason||r.message}}:s);setRewards({items:[],soulBones:[],ring:null,exp:0,coins:0,cultivation:r.reason||r.message});setVictoryStep('summary');setPhase('victory');return;}
        if(battleState?.meta?.shadow){setRewards({items:[],soulBones:[],ring:null,exp:battleState.meta.expReward||0,coins:battleState.meta.coinReward||0});setVictoryStep('summary');setPhase('victory');return;}
        const isArenaOrExam = battleType === 'arena' || battleType === 'shrek-exam';
         const isSeaGod = battleType === 'sea-god';
@@ -3557,7 +3558,7 @@ function __fbRestoreSpirits(spirits,saved) {
                       击败了 <span className="text-cyan-300 font-semibold">{rewards.beastName}</span>
                     </div>
                   )}
-                  {liehunRef.current?.eligible && <div className="rounded-xl border border-purple-500/25 bg-card/60 p-3 text-xs" data-liehun-reward>碎念汲取：玩家直接伤害 {formatNumber(liehunRef.current.damage)}，永久精神力 +{formatNumber(Math.floor(liehunRef.current.damage/1e16))}</div>}
+                  {(battleState?.meta?.valley||(battleState?.meta as any)?.ascension)&&<div className="rounded-xl border border-cyan-500/30 p-3 text-sm text-cyan-200 mb-2" data-cultivation-settlement>{rewards.cultivation||(battleState?.meta as any)?.cultivationReward||'本次试炼已结算，材料可在培养页面查看。'}</div>}{liehunRef.current?.eligible && <div className="rounded-xl border border-purple-500/25 bg-card/60 p-3 text-xs" data-liehun-reward>碎念汲取：玩家直接伤害 {formatNumber(liehunRef.current.damage)}，永久精神力 +{formatNumber(Math.floor(liehunRef.current.damage/1e16))}</div>}
                   {battleState?.meta?.abyss&&<div className="rounded-xl border border-cyan-500/30 p-3 text-sm text-cyan-200" data-abyss-reward>深渊奖励已入账：军功 +{battleState.meta.abyss.reward?.merit||0} · 结晶 +{battleState.meta.abyss.reward?.crystals||0}{battleState.meta.abyss.first&&<p className="text-xs mt-2">首通：矿石 +{battleState.meta.abyss.reward?.ore||0} · 魂锻沉银 +{battleState.meta.abyss.reward?.soulforged||0}</p>}</div>}
                   {(rewards.exp > 0 || rewards.coins > 0) && (
                     <div className="flex items-center justify-center gap-4 text-sm mb-3">

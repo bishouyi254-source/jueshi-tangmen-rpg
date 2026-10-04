@@ -1,3 +1,4 @@
+import {MaterialSourceDrawer} from '@/pages/Game/MaterialSources';
 import TwinDragonPanel from '@/pages/Game/TwinDragonPanel';
 import {hasTwinDragon} from '@/lib/twinDragon';
 import LeaderboardPanel from '@/pages/Game/LeaderboardPanel';
@@ -525,7 +526,7 @@ export default function GameShell() {
   // ========== 移动端布局 ==========
   if (isMobile) {
     return (
-      <div className="relative flex flex-col h-[100dvh] w-full overflow-hidden">
+      <div className="relative flex flex-col h-[100dvh] w-full overflow-hidden"><MaterialSourceDrawer/>
         {/* 天空背景 */}
         <div className="absolute inset-0 pointer-events-none">
           <StarryBackground />
@@ -734,7 +735,7 @@ export default function GameShell() {
 
   // ========== 电脑端布局（侧边栏） ==========
   return (
-    <div className="relative flex h-[100dvh] w-full overflow-hidden bg-background">
+    <div className="relative flex h-[100dvh] w-full overflow-hidden bg-background"><MaterialSourceDrawer/>
       {/* 天空背景 */}
       <div className="absolute inset-0 pointer-events-none">
         <StarryBackground />
