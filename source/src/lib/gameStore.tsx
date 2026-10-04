@@ -1,3 +1,4 @@
+import {readTwin,twinBonuses,createTwinBattle,settleTwin,extendTwinDomain} from './twinDragon';
 import {elementSet,resonance,extremeMultipliers} from './attributeRules';
 import {normalizeSilver,readSilverBlood,reincarnateSilver,silverBonuses,createSilverBattle,settleSilver,SILVER_ELEMENTS} from './silverKing';
 import {normalizeGoldKing} from './goldKing';
@@ -708,6 +709,8 @@ function getDomainMultiplier(level: number): number {
 
 // 玩家数据
 export interface IPlayer {
+  twinResonance?: ReturnType<typeof readTwin>;
+  twinAutoBreak?: boolean;
   goldBlood?: ReturnType<typeof readGoldBlood>;
   silverBloodline?:ReturnType<typeof readSilverBlood>;
   dragonBloodline?: import('./dragonBloodline').BloodlineProgress;
@@ -2218,8 +2221,8 @@ export function calcAttributes(player: IPlayer): IAttrs {
       allAttrPct = Math.max(-0.9, allAttrPct - 0.8); // 下界保护：虚弱状态最多-80%
    }
 
-    const bloodBonus=bloodlineBonuses(player),goldBloodBonus=goldBloodBonuses(player),silverBonus=silverBonuses(player);attack*=1+bloodBonus.attack+goldBloodBonus.attack;hp*=1+bloodBonus.hp+goldBloodBonus.hp+silverBonus.hp;
-  spirit*=1+silverBonus.spirit;defense*=1+bloodBonus.defense+silverBonus.defense;speed*=1+bloodBonus.speed+silverBonus.speed;maxSoulPower=Math.max(1,Math.round(maxSoulPower*(1+bloodBonus.mana+silverBonus.mana)));
+    const bloodBonus=bloodlineBonuses(player),goldBloodBonus=goldBloodBonuses(player),silverBonus=silverBonuses(player),twinBonus=twinBonuses(player);attack*=1+bloodBonus.attack+goldBloodBonus.attack+twinBonus.attack;hp*=1+bloodBonus.hp+goldBloodBonus.hp+silverBonus.hp+twinBonus.hp;
+  spirit*=1+silverBonus.spirit+twinBonus.spirit;defense*=1+bloodBonus.defense+silverBonus.defense+twinBonus.defense;speed*=1+bloodBonus.speed+silverBonus.speed;maxSoulPower=Math.max(1,Math.round(maxSoulPower*(1+bloodBonus.mana+silverBonus.mana)));
     const armorBonus=armorBonuses(player);
     attack*=1+armorBonus.attack;defense*=1+armorBonus.defense;speed*=1+armorBonus.speed;spirit*=1+armorBonus.spirit;hp*=1+armorBonus.hp;
     // 取最终常驻精神，转换一次；不重新进入属性倍率计算。
@@ -5989,7 +5992,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ...baseP,
           dragonLegend: reincarnateDragon(player),
           abyssFrontier: reincarnateAbyss(player),
-          dragonBloodline: reincarnateBloodline(player),dragonValley:reincarnateValley(player),goldBlood:readGoldBlood(player.goldBlood),silverBloodline:reincarnateSilver(player),
+          twinResonance:readTwin(player.twinResonance),dragonBloodline: reincarnateBloodline(player),dragonValley:reincarnateValley(player),goldBlood:readGoldBlood(player.goldBlood),silverBloodline:reincarnateSilver(player),
           name: finalName,
           direction: player.direction,
           isTwinSoul: isTwinAfterReroll,
@@ -11051,7 +11054,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       logs: [],
       updatedAt: Date.now(),
       exploreSource: config.exploreSource,
-      meta: { ...config.meta, liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()),goldBattle:createGoldBattle(player,config,player?calcAttributes(player).hp:1,crypto.randomUUID()),silverBattle:createSilverBattle(player,config,crypto.randomUUID()) },
+      meta: { ...config.meta, liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()),twinBattle:createTwinBattle(player,config,crypto.randomUUID()),goldBattle:extendTwinDomain(player,createGoldBattle(player,config,player?calcAttributes(player).hp:1,crypto.randomUUID())),silverBattle:extendTwinDomain(player,createSilverBattle(player,config,crypto.randomUUID())) },
     });
     setInBattle(true);
   };
@@ -11068,7 +11071,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setInBattle(false);
     // 战斗结束后立即回满血
     setPlayer((p) => {
-      p=settleSilver(settleGoldBlood(p,battleState?.meta?.goldBattle,bPhase||''),battleState?.meta?.silverBattle,bPhase||'');
+      p=settleTwin(settleSilver(settleGoldBlood(p,battleState?.meta?.goldBattle,bPhase||''),battleState?.meta?.silverBattle,bPhase||''),battleState?.meta?.twinBattle,bPhase||'');
       const attrs = calcAttributes(p);
       let np = ascensionId ? dragonAction(p,{type:"leave",id:ascensionId}).player : { ...p };
       if(abyssId)np=abyssAction(np,{type:"leave",id:abyssId}).player;
@@ -11845,5 +11848,5 @@ export function dragonAttributeSources(p:any){
  const bones=p.divineArmor?.hasArmor&&p.divineArmor.sourceBones?Object.values(p.divineArmor.sourceBones).filter((b:any)=>b?.type==='soulBone'):Object.values(p.soulBones||{}).filter((b:any)=>b?.type==='soulBone');
  const souls=[{soul:p.martialSoul,rings:p.soulRings||[],secondary:false},...(p.isTwinSoul&&p.secondSoul?[{soul:p.secondSoul,rings:p.secondSoulRings||[],secondary:true}]:[])].map(x=>({...x,extreme:extremeMultipliers(x.soul.extremeAttribute||'',x.secondary),resonance:calcAttributeBonus(x.soul.element||getSoulElement(x.soul.name),x.rings,bones,{extremeAttribute:x.soul.extremeAttribute})}));
  const b=bloodlineBonuses(p),g=goldBloodBonuses(p),v=silverBonuses(p),a=armorBonuses(p);
- return {souls,bones,blood:{attack:b.attack+g.attack,defense:b.defense+v.defense,speed:b.speed+v.speed,spirit:v.spirit,hp:b.hp+g.hp+v.hp,mana:b.mana+v.mana},skill:{gold:b.skill,silver:v.skill},armor:a};
+ return {twin:twinBonuses(p),souls,bones,blood:{attack:b.attack+g.attack,defense:b.defense+v.defense,speed:b.speed+v.speed,spirit:v.spirit,hp:b.hp+g.hp+v.hp,mana:b.mana+v.mana},skill:{gold:b.skill,silver:v.skill},armor:a};
 }

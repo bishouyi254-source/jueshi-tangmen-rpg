@@ -691,20 +691,21 @@ function __fbShield(s,key,pct,logs=[]) {
 function __fbDamage(s,target,amount,options={},logs=[]) {
   const a=s.actors[target],attacker=s.actors[options.attacker||'player'];
   if(!a||a.hp<=0||amount<=0)return {lost:0,absorbed:0,reflected:0};
-  let damage=Math.max(0,Math.round(amount));
+  let damage=Math.max(0,Math.round(amount)),twinIncrement=0;
   if(options.direct!==false&&!options.raw)damage=Math.round(damage*(1-Math.min(.9,__fbValue(a,'goldDirectReduction'))));
   if(options.direct!==false&&!options.raw&&attacker){
-    const gold=__fbValue(attacker,'directDamageUp'),silver=options.silverSkill?__fbValue(attacker,'silverSkillUp'):0,before=damage;
-    damage=Math.round(damage*(1+gold+silver));
-    if(gold||silver)logs.push(`领域增幅：直接伤害 +${Math.round(gold*100)}%、银龙魂技 +${Math.round(silver*100)}%，同阶段合计 +${Math.round((gold+silver)*100)}%；${before} → ${damage}（护盾前）。`);
+    const gold=__fbValue(attacker,'directDamageUp'),silver=options.silverSkill?__fbValue(attacker,'silverSkillUp'):0,before=damage,link=Math.min(.1,Math.max(0,options.twinRate||0));
+    damage=Math.round(damage*(1+gold+silver+link));twinIncrement=damage-Math.round(before*(1+gold+silver));
+    if(gold||silver||link)logs.push(`领域增幅：直接伤害 +${Math.round(gold*100)}%、银龙魂技 +${Math.round(silver*100)}%，金银共鸣 +${Math.round(link*100)}%，同阶段合计 +${Math.round((gold+silver+link)*100)}%；${before} → ${damage}（护盾前）。`);
   }
-  if(!options.raw){const vulnerable=Math.max(__fbValue(a,'vulnerable'),options.direct!==false?__fbValue(a,'goldDirectVulnerable'):0);damage=Math.round(damage*(1+vulnerable)*(1-Math.min(.9,__fbValue(a,'reduction'))));}
+  if(!options.raw){const vulnerable=Math.max(__fbValue(a,'vulnerable'),options.direct!==false?__fbValue(a,'goldDirectVulnerable'):0);damage=Math.round(damage*(1+vulnerable)*(1-Math.min(.9,__fbValue(a,'reduction'))));twinIncrement=Math.round(twinIncrement*(1+vulnerable)*(1-Math.min(.9,__fbValue(a,'reduction'))));}
   if(Number.isFinite(options.cap))damage=Math.min(damage,Math.max(0,options.cap));
   if(options.direct!==false&&!options.raw&&attacker?.effects?.goldCounter&&attacker.goldCounterCharge>0&&attacker.hp>0){damage+=Math.min(Math.round(damage*.5),attacker.goldCounterCharge);attacker.goldCounterCharge=0;logs.push('金龙霸体：承受来力转为反击。');}
-  const absorbed=Math.min(a.shield,damage);a.shield-=absorbed;damage-=absorbed;
+  const absorbed=Math.min(a.shield,damage);a.shield-=absorbed;a.twinShieldAmount=Math.max(0,(a.twinShieldAmount||0)-absorbed);damage-=absorbed;
   const before=a.hp;let lost=Math.min(before,damage);a.hp=before-lost;
   if(a.hp===0&&target==='enemy'&&__FBProfiles[s.beastId]?.immortal&&!a.immortalUsed){a.hp=1;a.immortalUsed=true;lost=before-1;logs.push('鬼帝触发【生死轮转】：本场唯一一次免死，保留1点气血。');}
   if(options.direct!==false&&!options.raw&&a.hp>0&&__fbValue(a,'goldCounter')>0)a.goldCounterCharge=Math.min(Math.floor(a.maxHp*.08),(a.goldCounterCharge||0)+Math.round(lost*.5));
+  if(twinIncrement>0){const benefit=Math.max(0,lost-Math.min(before,Math.max(0,damage-twinIncrement)));logs.push('金银共鸣：本次实际扣血增量 '+benefit+'（含护盾、减伤与过量伤害限制）。');}
   let reflected=0;
   // The defender must survive the hit; lethal hits never retaliate.
   if(options.direct!==false&&a.hp>0&&attacker?.hp>0){
@@ -715,7 +716,7 @@ function __fbDamage(s,target,amount,options={},logs=[]) {
 }
 function __fbBegin(s,key,logs=[]) {
   const a=s.actors[key];if(!a||a.hp<=0)return {skip:true,dead:true};
-  if(key==='enemy'){const e=s.actors.player?.effects?.goldDominion;if(e){if(e.turns<=0)delete s.actors.player.effects.goldDominion;else e.turns--;}}
+  if(key==='enemy'){const p=s.actors.player;if(p&&Number.isFinite(p.twinShieldTurns)){if(p.twinShieldTurns<=0){p.shield=Math.max(0,p.shield-(p.twinShieldAmount||0));p.twinShieldAmount=0;delete p.twinShieldTurns;}else p.twinShieldTurns--; }for(const id of ['goldDominion','twinGuard','twinRisk']){const e=s.actors.player?.effects?.[id];if(e){if(e.turns<=0)delete s.actors.player.effects[id];else e.turns--;}}}
   a.action++;
   const values=Object.values(a.effects),strongestDot=values.filter(e=>e.type==='dot').sort((a,b)=>b.value-a.value)[0],strongestHot=values.filter(e=>e.type==='hot').sort((a,b)=>b.value-a.value)[0];
   for(const e of values){
@@ -727,10 +728,14 @@ function __fbBegin(s,key,logs=[]) {
   if(controlled&&a.hp>0)logs.push(`${a.name} 受到【${controlled.label}】，跳过本次行动。`);
   return {skip:a.hp<=0||!!controlled,dead:a.hp<=0};
 }
-function __fbFinish(s,key) {
+function __fbExpireTwinShield(s) {const p=s?.actors?.player;if(p&&p.twinShieldTurns===0){p.shield=Math.max(0,p.shield-(p.twinShieldAmount||0));p.twinShieldAmount=0;delete p.twinShieldTurns;}}
+function __fbFinish(s,key,deferShieldExpiration=false) {
+  if(key==='enemy'&&!deferShieldExpiration)__fbExpireTwinShield(s);
   const a=s.actors[key];if(!a)return;
+  
+
   if(!a.effects.goldCounter)a.goldCounterCharge=0;
-  for(const [id,e] of Object.entries(a.effects))if(!e.manual&&e.type!=='goldDirectReduction'&&e.born<a.action&&--e.turns<=0)delete a.effects[id];
+  for(const [id,e] of Object.entries(a.effects))if(!e.manual&&e.type!=='goldDirectReduction'&&e.id!=='twinRisk'&&e.born<a.action&&--e.turns<=0)delete a.effects[id];
 }
 function __fbDirect(s,target,damage,options={}) {
   const next=__fbClone(s),logs=[],result=__fbDamage(next,target,damage,options,logs);
@@ -795,4 +800,4 @@ function __fbStatus(s) {
 
 for(const n of ABYSS_NODES)__FBProfiles[n.id]={id:n.id,name:n.name,skills:['深渊侵袭','暗潮秘术','深渊威压'],attr:n.attr,immortal:false,rules:n.rules};
 for(const n of VALLEY_NODES)__FBProfiles[n.id]={id:n.id,name:n.name,skills:['龙魂侵袭','遗迹秘术','龙威'],attr:n.attr,immortal:false,rules:n.rules};
-export {__fbAdd,__fbShield,__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus};
+export {__fbExpireTwinShield,__fbAdd,__fbShield,__FBProfiles,__fbClone,__fbCreate,__fbHeal,__fbDefense,__fbDirect,__fbBegin,__fbFinish,__fbEnemyAction,__fbSpeed,__fbStatus};

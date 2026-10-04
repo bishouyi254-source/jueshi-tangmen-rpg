@@ -1,3 +1,5 @@
+import TwinDragonPanel from '@/pages/Game/TwinDragonPanel';
+import {hasTwinDragon} from '@/lib/twinDragon';
 import LeaderboardPanel from '@/pages/Game/LeaderboardPanel';
 import SilverBloodlinePanel from '@/pages/Game/SilverBloodlinePanel';
 import {hasSilverKing} from '@/lib/silverKing';
@@ -56,7 +58,7 @@ const TAB_STORAGE_KEY = `game_active_tab_${getAppId() ?? 'app'}`;
 type TabValue =
   | 'character' | 'inventory' | 'map' | 'soulRing' | 'cultivation' | 'more'
    | 'shop' | 'craft' | 'domain' | 'convert' | 'divineTrial' | 'artifact' | 'soulSpirit' | 'settings' | 'reincarnation' | 'reincarnationHistory'
-  | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws' | 'reincarnationShadow';
+  | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'twinDragon' | 'goldBloodline' | 'laws' | 'reincarnationShadow';
 
 // 移动端底部导航（6个）
 const MOBILE_NAV_ITEMS: Array<{ value: TabValue; label: string; icon: typeof User }> = [
@@ -93,6 +95,7 @@ const SIDEBAR_GROUPS: Array<{
       {value:'ascension',label:'升灵台',icon:Sparkles},
       {value:'forgeArmor',label:'锻造斗铠',icon:Hammer},
       {value:'silverBloodline',label:'银龙王血脉',icon:Sparkles},
+      {value:'twinDragon',label:'金银共鸣',icon:Sparkles},
       {value:'goldBloodline',label:'金龙王血脉',icon:Sparkles},
       { value: 'companions', label: '侣', icon: HeartHandshake },
       { value: 'craft', label: '自制魂导器', icon: Hammer },
@@ -116,13 +119,13 @@ const SIDEBAR_GROUPS: Array<{
 
 // 所有有效 tab（用于 storage 校验）
 const ALL_VALID_TABS: TabValue[] = [
-  'leaderboard', 'character', 'inventory', 'map', 'soulRing', 'cultivation', 'more', 'ascension', 'forgeArmor', 'silverBloodline', 'goldBloodline',
+  'leaderboard', 'character', 'inventory', 'map', 'soulRing', 'cultivation', 'more', 'ascension', 'forgeArmor', 'twinDragon', 'silverBloodline', 'goldBloodline',
   'reincarnationShadow', 'laws', 'shop', 'craft', 'domain', 'convert', 'divineTrial', 'artifact', 'soulSpirit', 'settings', 'reincarnation', 'reincarnationHistory', 'achievement', 'godRealm', 'companions','laws','reincarnationShadow',
 ];
 
 export default function GameShell() {
   const { player, attributes, loading, inBattle, battleState, exploration, abortExploration, setCurrentHp, endBattle, pendingFavorBeastId, startBattle } = useGame();
-  const [moreSub, setMoreSub] = useState<'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws' | null>(null);
+  const [moreSub, setMoreSub] = useState<'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'twinDragon' | 'goldBloodline' | 'laws' | null>(null);
   const [showTopNotice, setShowTopNotice] = useState(() => {
     try {
       return scopedStorage.getItem('__douluo_top_notice_closed') !== '1';
@@ -259,7 +262,7 @@ export default function GameShell() {
   };
 
   // 更多页面内部跳转（移动端）
-  const openMoreSub = (sub: 'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws') => {
+  const openMoreSub = (sub: 'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'twinDragon' | 'goldBloodline' | 'laws') => {
     setMoreSub(sub);
   };
 
@@ -434,6 +437,7 @@ export default function GameShell() {
   // 渲染主内容面板
   const renderPanel = (tab: TabValue) => {
     switch (tab) {
+      case 'twinDragon': return <TwinDragonPanel onBack={()=>handleDesktopNav('character')}/>;
       case 'silverBloodline': return <SilverBloodlinePanel onBack={()=>handleDesktopNav('character')}/>;
       case 'goldBloodline': return <GoldBloodlinePanel onBack={()=>handleDesktopNav('character')}/>;
       case 'character': return <CharacterPanel />;
@@ -460,6 +464,7 @@ export default function GameShell() {
       case 'shop': return <InventoryPanel />;
       case 'reincarnationShadow': return <ReincarnationShadowPanel onClose={()=>handleDesktopNav('character')} onStartBattle={orb=>{const cfg=__localBuildShadow(orb);cfg.meta.shadowOrb=orb;cfg.meta.expReward=shadowVictoryExp(orb.level);cfg.meta.coinReward=Math.max(500,orb.level*500);startBattle(cfg);}}/>;
       case 'more':
+        if (moreSub === 'twinDragon') return <TwinDragonPanel onBack={()=>setMoreSub(null)}/>;
         if (moreSub === 'silverBloodline') return <SilverBloodlinePanel onBack={()=>setMoreSub(null)}/>;
         if (moreSub === 'goldBloodline') return <GoldBloodlinePanel onBack={()=>setMoreSub(null)}/>;
         if (moreSub === 'leaderboard') return <LeaderboardPanel onBack={() => setMoreSub(null)} />;
@@ -494,6 +499,7 @@ export default function GameShell() {
              onOpenSettings={() => openMoreSub('settings')}
              onOpenCraft={() => openMoreSub('craft')}
              onOpenDomain={() => openMoreSub('domain')}
+             onOpenTwinDragon={()=>openMoreSub('twinDragon')}
              onOpenSilverBloodline={()=>openMoreSub('silverBloodline')}
              onOpenGoldBloodline={() => openMoreSub('goldBloodline')}
              onOpenAscension={() => openMoreSub('ascension')}
@@ -801,7 +807,7 @@ export default function GameShell() {
                 {group.groupLabel}
               </div>
               <div className="space-y-0.5">
-                {group.items.filter(item=>(item.value!=='goldBloodline'||hasGoldKing(player))&&(item.value!=='silverBloodline'||hasSilverKing(player))).map((item) => {
+                {group.items.filter(item=>(item.value!=='twinDragon'||hasTwinDragon(player)&&player.level>=60)&&(item.value!=='goldBloodline'||hasGoldKing(player))&&(item.value!=='silverBloodline'||hasSilverKing(player))).map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.value;
                   return (
@@ -961,7 +967,7 @@ function getPageTitle(tab: TabValue): string {
     convert: '材料转换',
     divineTrial: '神考',
     artifact: '神器',
-    silverBloodline:'银龙王血脉',goldBloodline:'金龙王血脉', soulSpirit: '魂灵', ascension:'升灵台', forgeArmor:'锻造斗铠',
+    twinDragon:'金银共鸣',silverBloodline:'银龙王血脉',goldBloodline:'金龙王血脉', soulSpirit: '魂灵', ascension:'升灵台', forgeArmor:'锻造斗铠',
     reincarnation: '转世轮回',
     reincarnationHistory: '轮回史鉴',
     settings: '设置',

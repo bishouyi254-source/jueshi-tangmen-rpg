@@ -1,3 +1,4 @@
+import {hasTwinDragon} from '@/lib/twinDragon';
 import {hasSilverKing} from '@/lib/silverKing';
 import {hasGoldKing} from '@/lib/goldKing';
 import { useState, useMemo } from 'react';
@@ -20,6 +21,7 @@ interface MoreItem {
 }
 
 interface MorePageProps {
+  onOpenTwinDragon?:()=>void;
   onOpenLeaderboard?: () => void;
   onOpenSilverBloodline?:()=>void;
   onOpenGoldBloodline?:()=>void;
@@ -52,7 +54,7 @@ const CATEGORIES: { key: CategoryKey; label: string; icon: typeof Sparkles; colo
   { key: 'system',  label: '系统设置', icon: Settings, color: 'text-muted-foreground' },
 ];
 
-export default function MorePage({ onOpenLeaderboard, onOpenSilverBloodline, onOpenGoldBloodline, onOpenAscension, onOpenForgeArmor, onOpenSettings, onOpenCraft, onOpenDomain, onOpenSoulSpirit, onOpenConvert, onOpenDivineTrial, onOpenArtifact, onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenAchievement, onOpenGodRealm, onOpenCompanions, onOpenCodex, onOpenLaws }: MorePageProps) {
+export default function MorePage({ onOpenLeaderboard, onOpenTwinDragon, onOpenSilverBloodline, onOpenGoldBloodline, onOpenAscension, onOpenForgeArmor, onOpenSettings, onOpenCraft, onOpenDomain, onOpenSoulSpirit, onOpenConvert, onOpenDivineTrial, onOpenArtifact, onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenAchievement, onOpenGodRealm, onOpenCompanions, onOpenCodex, onOpenLaws }: MorePageProps) {
   const { player, canEnterDivineTrials, canReincarnate } = useGame();
   const canCraft = player && player.level >= 10;
   const canDomain = player && player.level >= 70 && player.soulRings.length >= 7;
@@ -71,6 +73,7 @@ export default function MorePage({ onOpenLeaderboard, onOpenSilverBloodline, onO
 
   const allItems = useMemo<Record<CategoryKey, MoreItem[]>>(() => ({
     growth: [
+      ...(hasTwinDragon(player)&&player.level>=60?[{key:'twinDragon',label:'金银共鸣',desc:'五阶段成长、联动技能与双领域',icon:Sparkles,iconColor:'text-cyan-200',iconBg:'bg-cyan-900/30',onClick:()=>onOpenTwinDragon?.()}]:[]),
       ...(hasSilverKing(player)?[{key:'silverBloodline',label:'银龙王血脉',desc:'七元素掌控、银龙真身与银龙神技',icon:Sparkles,iconColor:'text-cyan-200',iconBg:'bg-cyan-900/30',onClick:()=>onOpenSilverBloodline?.()}]:[]),
       ...(hasGoldKing(player)?[{key:'goldBloodline',label:'金龙王血脉',desc:'解开十八道封印，培养四条血脉进化路线',icon:Sparkles,iconColor:'text-amber-300',iconBg:'bg-amber-900/30',onClick:()=>onOpenGoldBloodline?.()}]:[]),
       {key:'ascension',label:'升灵台',desc:'试炼获取灵力，进化已契约魂灵',icon:Sparkles,iconColor:'text-cyan-300',iconBg:'bg-cyan-900/30',onClick:()=>onOpenAscension?.()},

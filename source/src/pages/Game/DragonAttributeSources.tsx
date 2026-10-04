@@ -19,8 +19,8 @@ export default function DragonAttributeSources({player}:{player:any}){
     <p>共鸣：魂环 {x.resonance.hasRingMatch?'已匹配 +5%':'未匹配'} · 魂骨 {x.resonance.hasBoneMatch?'已匹配 +5%':'未匹配'}；常驻五维 +{pct(x.resonance.bonusPct)}</p>
     <p className="text-muted-foreground">魂环与魂骨各最多计算一次。力量、速度、防御不作为元素；时间与空间分别判定。</p>
    </div>)}
-   <div className="border-t border-border/40 pt-2"><p className="font-semibold">常驻成长</p><p>血脉与成长：{bonuses(s.blood)}</p><p>斗铠：{bonuses(s.armor)}</p><p>攻击魂技成长：金龙 +{pct(s.skill.gold)} · 银龙 +{pct(s.skill.silver)}</p></div>
-   <div className="border-t border-border/40 pt-2"><p className="font-semibold">战斗临时效果</p>{s.souls.some((x:any)=>x.soul.name==='金龙王')&&<p>金龙镇狱领域：{goldDomainDescription(player)}</p>}{s.souls.some((x:any)=>x.soul.name==='银龙王')&&<p>银龙元素领域：{d?'入战展开3次行动；银龙攻击魂技伤害 +'+pct(d.damage)+'，魂力消耗 -'+pct(d.cost):'掌控至少3种元素后解锁'}。七元素是成长路线，全属性是武魂匹配范围。</p>}<p className="text-muted-foreground">金银龙王领域、战斗真身和魂技增益在战斗内生效，不提前加入常驻面板。金银领域可共存，各自结束；直接伤害增幅在同一阶段相加一次。</p></div>
+   <div className="border-t border-border/40 pt-2"><p className="font-semibold">常驻成长</p><p>血脉与成长：{bonuses(s.blood)}</p><p>金银共鸣（同血脉阶段相加）：{bonuses(s.twin)}</p><p>斗铠：{bonuses(s.armor)}</p><p>攻击魂技成长：金龙 +{pct(s.skill.gold)} · 银龙 +{pct(s.skill.silver)}</p></div>
+   <div className="border-t border-border/40 pt-2"><p className="font-semibold">战斗临时效果</p>{s.souls.some((x:any)=>x.soul.name==='金龙王')&&<p>金龙镇狱领域：{goldDomainDescription(player).replace('3次',s.twin.stage>=4?'4次':'3次')}</p>}{s.souls.some((x:any)=>x.soul.name==='银龙王')&&<p>银龙元素领域：{d?'入战展开'+(s.twin.stage>=4?4:3)+'次行动；银龙攻击魂技伤害 +'+pct(d.damage)+'，魂力消耗 -'+pct(d.cost):'掌控至少3种元素后解锁'}。七元素是成长路线，全属性是武魂匹配范围。</p>}<p className="text-muted-foreground">金银龙王领域、战斗真身和魂技增益在战斗内生效，不提前加入常驻面板。金银领域可共存，各自结束；直接伤害增幅在同一阶段相加一次。</p></div>
    <div className="border-t border-border/40 pt-2"><p className="font-semibold">魂环保存系数</p><p className="text-muted-foreground">魂环伤害系数保留吸收或成长时的契合度；战斗不再次乘契合度。共鸣提升常驻五维，详情页不会再额外增加5%伤害。</p></div>
   </div>
  </details>;

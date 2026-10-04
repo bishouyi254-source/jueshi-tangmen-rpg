@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "斗罗复刻版控制台",
+  "version": "1.0.5",
+  "description": "用于本地复刻版和 GitHub Pages 的独立控制台。",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://4kxu2wt6ct8mb.aiforce.cloud/app/app_17dnukzxw22/*",
+        "https://bishouyi254-source.github.io/jueshi-tangmen-rpg/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "save-transfer.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}
