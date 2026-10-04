@@ -4,6 +4,7 @@ import { Settings, RotateCcw, Info } from 'lucide-react';
 import { useGame } from '@/lib/gameStore';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { CloudAccountPanel, useCloud } from '@/components/CloudAccount';
 
 interface SettingsPanelProps {
   onBack?: () => void;
@@ -11,10 +12,12 @@ interface SettingsPanelProps {
 
 export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const { resetGame, player } = useGame();
+  const cloud=useCloud();
   const navigate = useNavigate();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleReset = () => {
+    cloud?.stop();
     // 先调用 resetGame 清除内存状态和 localStorage 存档
     resetGame();
     setShowResetConfirm(false);
@@ -42,6 +45,7 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
         </div>
       )}
       {/* 存档管理 */}
+      <CloudAccountPanel />
       <div className="rounded-2xl border border-border/40 bg-card/40 overflow-hidden">
         <div className="p-3 border-b border-border/30">
           <h3 className="text-sm font-semibold">存档管理</h3>

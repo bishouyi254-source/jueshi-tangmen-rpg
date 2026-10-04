@@ -33,6 +33,7 @@ export function valleyAction(p:any,a:any,now=Date.now()){
  }else if(a.type==='leave'){
   if(v.trial?.id!==a.id&&v.exploration?.id!==a.id)return fail('当前探索已结束');v.trial=null;v.exploration=null;message='龙谷探索结束';
  }else if(a.type==='evolve'){
+  if(a.expectedRank!==undefined&&nat(p?.dragonBloodline?.evolutions?.[a.track])!==a.expectedRank)return fail('进度已变化，请重新查看升级预览');
   if(v.trial||v.exploration)return fail('探索或试炼中不能进化');const r=evolutionRequirements(p,a.track);if(r.reason)return fail(r.reason);b.essence-=r.essence;b.marrow-=r.marrow;b.core-=r.core;b.evolutions={...goldEvolutions(p),[a.track]:r.next};message=GOLD_EVOLUTIONS.find(e=>e.id===a.track)!.name+'进化至第'+r.next+'阶';
  }else if(a.type==='exchange'){
   if(v.trial||v.exploration)return fail('探索中不能兑换');if(nat(abyss?.merit)<60)return fail('军功不足');abyss={...abyss,merit:abyss.merit-60};b.essence+=5;message='60军功兑换龙魂精华 ×5';

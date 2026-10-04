@@ -1,3 +1,4 @@
+import LeaderboardPanel from '@/pages/Game/LeaderboardPanel';
 import SilverBloodlinePanel from '@/pages/Game/SilverBloodlinePanel';
 import {hasSilverKing} from '@/lib/silverKing';
 import GoldBloodlinePanel from '@/pages/Game/GoldBloodlinePanel';
@@ -10,7 +11,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   User, Backpack, Map, Sparkles, CircleDot, MoreHorizontal, Coins,
   ShoppingBag, Crown, Award, Hammer, RefreshCw, Mountain, Settings, X,
-  Ghost, RotateCcw, Clock, HeartHandshake, History,
+  Ghost, RotateCcw, Clock, HeartHandshake, History, Trophy,
 } from 'lucide-react';
 import { useGame, getRealmDisplay, isBottleneck } from '@/lib/gameStore';
 import { ACHIEVEMENTS, type IAchievement } from '@/data/achievements';
@@ -55,7 +56,7 @@ const TAB_STORAGE_KEY = `game_active_tab_${getAppId() ?? 'app'}`;
 type TabValue =
   | 'character' | 'inventory' | 'map' | 'soulRing' | 'cultivation' | 'more'
    | 'shop' | 'craft' | 'domain' | 'convert' | 'divineTrial' | 'artifact' | 'soulSpirit' | 'settings' | 'reincarnation' | 'reincarnationHistory'
-  | 'achievement' | 'godRealm' | 'companions' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws' | 'reincarnationShadow';
+  | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws' | 'reincarnationShadow';
 
 // 移动端底部导航（6个）
 const MOBILE_NAV_ITEMS: Array<{ value: TabValue; label: string; icon: typeof User }> = [
@@ -107,6 +108,7 @@ const SIDEBAR_GROUPS: Array<{
       { value: 'reincarnationHistory', label: '轮回史鉴', icon: History },
       {value:'reincarnationShadow',label:'轮回之影',icon:Ghost},
       {value:'laws',label:'法则',icon:Sparkles},
+      { value: 'leaderboard', label: '排行榜', icon: Trophy },
       { value: 'settings', label: '设置', icon: Settings },
     ],
   },
@@ -114,13 +116,13 @@ const SIDEBAR_GROUPS: Array<{
 
 // 所有有效 tab（用于 storage 校验）
 const ALL_VALID_TABS: TabValue[] = [
-  'character', 'inventory', 'map', 'soulRing', 'cultivation', 'more', 'ascension', 'forgeArmor', 'silverBloodline', 'goldBloodline',
+  'leaderboard', 'character', 'inventory', 'map', 'soulRing', 'cultivation', 'more', 'ascension', 'forgeArmor', 'silverBloodline', 'goldBloodline',
   'reincarnationShadow', 'laws', 'shop', 'craft', 'domain', 'convert', 'divineTrial', 'artifact', 'soulSpirit', 'settings', 'reincarnation', 'reincarnationHistory', 'achievement', 'godRealm', 'companions','laws','reincarnationShadow',
 ];
 
 export default function GameShell() {
   const { player, attributes, loading, inBattle, battleState, exploration, abortExploration, setCurrentHp, endBattle, pendingFavorBeastId, startBattle } = useGame();
-  const [moreSub, setMoreSub] = useState<'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws' | null>(null);
+  const [moreSub, setMoreSub] = useState<'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws' | null>(null);
   const [showTopNotice, setShowTopNotice] = useState(() => {
     try {
       return scopedStorage.getItem('__douluo_top_notice_closed') !== '1';
@@ -257,7 +259,7 @@ export default function GameShell() {
   };
 
   // 更多页面内部跳转（移动端）
-  const openMoreSub = (sub: 'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws') => {
+  const openMoreSub = (sub: 'settings' | 'craft' | 'domain' | 'soulSpirit' | 'convert' | 'shop' | 'divineTrial' | 'artifact' | 'reincarnation' | 'reincarnationHistory' | 'reincarnationView' | 'reincarnationShadow' | 'leaderboard' | 'achievement' | 'godRealm' | 'companions' | 'codex' | 'ascension' | 'forgeArmor' | 'silverBloodline' | 'goldBloodline' | 'laws') => {
     setMoreSub(sub);
   };
 
@@ -447,6 +449,7 @@ export default function GameShell() {
       case 'ascension': return <DragonLegendPanel mode="ascension"/>;
       case 'forgeArmor': return <DragonLegendPanel mode="forge"/>;
       case 'soulSpirit': return <SoulSpiritPanel />;
+      case 'leaderboard': return <LeaderboardPanel onBack={() => handleDesktopNav('character')} />;
       case 'settings': return <SettingsPanel onBack={() => handleDesktopNav('character')} />;
       case 'reincarnation': return <ReincarnationPanel onClose={() => handleDesktopNav('character')} onOpenHistory={() => setActiveTab('reincarnationHistory')} />;
       case 'reincarnationHistory': return <ReincarnationHistoryPanel onClose={() => handleDesktopNav('character')} />;
@@ -459,6 +462,7 @@ export default function GameShell() {
       case 'more':
         if (moreSub === 'silverBloodline') return <SilverBloodlinePanel onBack={()=>setMoreSub(null)}/>;
         if (moreSub === 'goldBloodline') return <GoldBloodlinePanel onBack={()=>setMoreSub(null)}/>;
+        if (moreSub === 'leaderboard') return <LeaderboardPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'settings') return <SettingsPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'craft') return <CraftPanel onBack={() => setMoreSub(null)} />;
         if (moreSub === 'domain') return <DomainPanel onBack={() => setMoreSub(null)} />;
@@ -486,6 +490,7 @@ export default function GameShell() {
            if (moreSub === 'codex') return <CodexPanel onBack={() => setMoreSub(null)} />;
         return (
           <MorePage
+             onOpenLeaderboard={() => openMoreSub('leaderboard')}
              onOpenSettings={() => openMoreSub('settings')}
              onOpenCraft={() => openMoreSub('craft')}
              onOpenDomain={() => openMoreSub('domain')}

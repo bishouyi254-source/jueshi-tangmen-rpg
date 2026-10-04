@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import SoulRing from '@/components/SoulRing';
 import StarryBackground from '@/components/StarryBackground';
 import LoadingScreen from '@/components/LoadingScreen';
+import { CloudAccountPanel } from '@/components/CloudAccount';
 import { Image } from '@/components/ui/image';
 
 type Step = 'titleScreen' | 'nameInput' | 'awakening' | 'soulResult' | 'powerAwakening' | 'powerResult';
@@ -19,6 +20,7 @@ type Step = 'titleScreen' | 'nameInput' | 'awakening' | 'soulResult' | 'powerAwa
     const [step, setStep] = useState<Step>('titleScreen');
     const [showIntroLoading, setShowIntroLoading] = useState(true); // 首次进入显示加载界面
     const [name, setName] = useState('');
+    const [showCloud,setShowCloud]=useState(false);
   const [soul, setSoul] = useState<IMartialSoul | null>(null);
   const [secondSoul, setSecondSoul] = useState<IMartialSoul | null>(null);
   const [isTwinSoul, setIsTwinSoul] = useState(false);
@@ -258,7 +260,9 @@ type Step = 'titleScreen' | 'nameInput' | 'awakening' | 'soulResult' | 'powerAwa
               </div>
 
               {/* 底部按钮 */}
+              {showCloud && <div className="fixed inset-0 z-50 bg-black/80 overflow-y-auto p-4"><div className="max-w-md mx-auto py-6"><button className="mb-3 text-cyan-200" onClick={()=>setShowCloud(false)}>返回游戏首页</button><CloudAccountPanel /></div></div>}
               <div className="pb-12 md:pb-16 flex flex-col items-center">
+                <button className="text-sm text-cyan-200 mb-4" onClick={()=>setShowCloud(!showCloud)}>账号登录 / 云存档</button>
                 <button
                   onClick={handleEnterWorld}
                   className="group relative px-12 py-3 rounded-full bg-amber-950/20 backdrop-blur-sm border border-amber-400/40 hover:bg-amber-950/30 hover:border-amber-400/60 text-amber-100 font-semibold text-lg shadow-lg shadow-black/20 transition-all hover:scale-105 active:scale-95"

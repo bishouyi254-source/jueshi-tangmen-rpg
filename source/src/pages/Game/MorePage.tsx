@@ -20,6 +20,7 @@ interface MoreItem {
 }
 
 interface MorePageProps {
+  onOpenLeaderboard?: () => void;
   onOpenSilverBloodline?:()=>void;
   onOpenGoldBloodline?:()=>void;
   onOpenAscension?:()=>void;
@@ -51,7 +52,7 @@ const CATEGORIES: { key: CategoryKey; label: string; icon: typeof Sparkles; colo
   { key: 'system',  label: '系统设置', icon: Settings, color: 'text-muted-foreground' },
 ];
 
-export default function MorePage({ onOpenSilverBloodline, onOpenGoldBloodline, onOpenAscension, onOpenForgeArmor, onOpenSettings, onOpenCraft, onOpenDomain, onOpenSoulSpirit, onOpenConvert, onOpenDivineTrial, onOpenArtifact, onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenAchievement, onOpenGodRealm, onOpenCompanions, onOpenCodex, onOpenLaws }: MorePageProps) {
+export default function MorePage({ onOpenLeaderboard, onOpenSilverBloodline, onOpenGoldBloodline, onOpenAscension, onOpenForgeArmor, onOpenSettings, onOpenCraft, onOpenDomain, onOpenSoulSpirit, onOpenConvert, onOpenDivineTrial, onOpenArtifact, onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenAchievement, onOpenGodRealm, onOpenCompanions, onOpenCodex, onOpenLaws }: MorePageProps) {
   const { player, canEnterDivineTrials, canReincarnate } = useGame();
   const canCraft = player && player.level >= 10;
   const canDomain = player && player.level >= 70 && player.soulRings.length >= 7;
@@ -263,6 +264,7 @@ export default function MorePage({ onOpenSilverBloodline, onOpenGoldBloodline, o
       },
     ],
     system: [
+      {key:'leaderboard', label:'排行榜', desc:'战力排名 · 当前角色与历代轮回档案', icon:Trophy, iconColor:'text-amber-300', iconBg:'bg-amber-900/30 border border-amber-500/30', onClick:()=>onOpenLeaderboard?.()},
       {
         key: 'settings',
         label: '设置',
@@ -276,7 +278,7 @@ export default function MorePage({ onOpenSilverBloodline, onOpenGoldBloodline, o
   }), [
     player, canCraft, canDomain, hasDomain, canSpirit, spiritBadge, canDivine, hasArtifact, canReinc,
     reincCount, totalAchievements, newAchievementCount, companionBadge,
-    onOpenAchievement, onOpenDomain, onOpenSoulSpirit, onOpenDivineTrial, onOpenGodRealm,
+    onOpenLeaderboard, onOpenAchievement, onOpenDomain, onOpenSoulSpirit, onOpenDivineTrial, onOpenGodRealm,
     onOpenLaws, onOpenSilverBloodline, onOpenGoldBloodline,
     onOpenArtifact, onOpenCompanions, onOpenCraft, onOpenConvert,
     onOpenReincarnation, onOpenReincarnationView, onOpenReincarnationShadow, onOpenSettings, onOpenCodex,

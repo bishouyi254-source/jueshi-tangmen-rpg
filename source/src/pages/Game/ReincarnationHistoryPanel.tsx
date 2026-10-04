@@ -18,13 +18,17 @@ const MAX_REINCARNATION = 99;
 
 interface ReincarnationHistoryPanelProps {
   onClose: () => void;
+  externalOrbs?: IReincarnationOrb[];
+  readOnly?: boolean;
+  currentView?: boolean;
+  title?: string;
 }
 
-export default memo(function ReincarnationHistoryPanel({ onClose }: ReincarnationHistoryPanelProps) {
+export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, readOnly = false, currentView = false, title = '轮回史鉴' }: ReincarnationHistoryPanelProps) {
   const { getReincarnationOrbs,startBattle,attributes } = useGame();
-  const orbs = getReincarnationOrbs();
+  const orbs = externalOrbs ?? getReincarnationOrbs();
   const [searchIndex, setSearchIndex] = useState('');
-  const [selectedOrb, setSelectedOrb] = useState<IReincarnationOrb | null>(null);
+  const [selectedOrb, setSelectedOrb] = useState<IReincarnationOrb | null>(currentView ? orbs[0] ?? null : null);
 
   const filteredOrbs = useMemo(() => {
     if (!searchIndex.trim()) return orbs;
@@ -44,7 +48,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose }: Reincarnatio
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Award className="h-5 w-5 text-amber-400" />
-          <h2 className="text-lg font-bold">轮回史鉴</h2>
+          <h2 className="text-lg font-bold">{title}</h2>
         </div>
         <Button variant="ghost" size="sm" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -64,7 +68,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose }: Reincarnatio
           max={MAX_REINCARNATION}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
-          共 {orbs.length} 世
+          {currentView ? '今生' : `共 ${orbs.length} 世`}
         </div>
       </div>
 
@@ -176,7 +180,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose }: Reincarnatio
                   </Button>
                 </div>
                 <Badge variant="outline" className="border-yellow-500/50 text-yellow-300">
-                  第 {selectedOrb.index} 世
+                  {currentView ? '当前角色' : `第 ${selectedOrb.index} 世`}
                 </Badge>
               </div>
 
@@ -223,13 +227,13 @@ export default memo(function ReincarnationHistoryPanel({ onClose }: Reincarnatio
                 </div>
               </div>
 
-            <ShadowComparison orb={selectedOrb} current={attributes}/>
-            <button className="w-full mb-3 rounded-lg p-3 bg-purple-700" onClick={()=>{try{const cfg=__localBuildShadow(selectedOrb);cfg.meta.shadowOrb=selectedOrb;cfg.meta.expReward=Math.max(1000,selectedOrb.level**2*20);cfg.meta.coinReward=Math.max(500,selectedOrb.level*500);onClose();startBattle(cfg);}catch(err){toast.error(err.message);}}}>挑战轮回之影 · 第{selectedOrb.index}世</button>
+            {!readOnly && <><ShadowComparison orb={selectedOrb} current={attributes}/>
+            <button className="w-full mb-3 rounded-lg p-3 bg-purple-700" onClick={()=>{try{const cfg=__localBuildShadow(selectedOrb);cfg.meta.shadowOrb=selectedOrb;cfg.meta.expReward=Math.max(1000,selectedOrb.level**2*20);cfg.meta.coinReward=Math.max(500,selectedOrb.level*500);onClose();startBattle(cfg);}catch(err){toast.error(err.message);}}}>挑战轮回之影 · 第{selectedOrb.index}世</button></>}
               {/* 五维属性 */}
               <div className="rounded-lg border border-border/50 bg-black/30 p-3 mb-3">
                 <div className="flex items-center gap-1.5 text-xs text-yellow-300 mb-2">
                   <Award className="h-3.5 w-3.5" />
-                  <span className="font-semibold">最终属性</span>
+                  <span className="font-semibold">{currentView ? '当前属性' : '最终属性'}</span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5 text-center">
                   <div className="rounded-md bg-black/20 py-2">
