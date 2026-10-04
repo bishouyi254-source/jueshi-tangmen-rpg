@@ -3,6 +3,7 @@ import { createClient, type Session } from '@supabase/supabase-js';
 import { useGame, type IExplorationState } from '@/lib/gameStore';
 import { cloudService, type CloudPayload, type CloudSlot } from '@/lib/cloudSave';
 import { supabaseConfig } from '@/lib/supabaseConfig';
+import { loginUsername, registerUsername } from '@/lib/usernameAuth';
 async function timedFetch(input:RequestInfo|URL,init?:RequestInit){
  const controller=new AbortController(),abort=()=>controller.abort();
  init?.signal?.addEventListener('abort',abort,{once:true});if(init?.signal?.aborted)controller.abort();
@@ -21,7 +22,6 @@ export function CloudAccountProvider({children}:{children:ReactNode}) {
  const [slots,setSlots]=useState<CloudSlot[]>([]),[status,setStatus]=useState('尚未登录'),[busy,setBusy]=useState(false);
  const [binding,setBinding]=useState<{slot:number;revision:number}|null>(null);
  const [pending,setPending]=useState<Pending|null>(null);
- const [recovery,setRecovery]=useState(false);
  const gen=useRef(0),uid=useRef<string|null>(null),lock=useRef(false),lastCode=useRef(''),latest=useRef(game),bindRef=useRef(binding);
  latest.current=game;bindRef.current=binding;
  useEffect(()=>{
@@ -35,7 +35,7 @@ export function CloudAccountProvider({children}:{children:ReactNode}) {
    setSession(s);
   };
   let eventSeen=false;
-  const {data}=client.auth.onAuthStateChange((event,s)=>{eventSeen=true;if(event==='PASSWORD_RECOVERY')setRecovery(true);if(event==='SIGNED_OUT')setRecovery(false);update(s);});
+  const {data}=client.auth.onAuthStateChange((_event,s)=>{eventSeen=true;update(s);});
   let active=true;client.auth.getSession().then(({data})=>{if(active&&!eventSeen)update(data.session);});
   return()=>{active=false;data.subscription.unsubscribe();};
  },[]);
@@ -98,33 +98,31 @@ export function CloudAccountProvider({children}:{children:ReactNode}) {
   return()=>clearInterval(timer);
  },[pending]);
  function cancelPending(){if(uid.current)localStorage.removeItem(pendingKey(uid.current));setPending(null);setBinding(null);setStatus('待上传请求已取消，本机存档保留，请刷新云存档后重新选择');}
- return <CloudContext.Provider value={{client,session,slots,status,busy,binding,pending,recovery,finishRecovery:()=>setRecovery(false),refresh,upload,restore,recoverLocal,retry:()=>pending && send(pending),cancelPending,leaderboard:session&&service?service.leaderboard:null,stop:()=>setBinding(null)}}>{children}{recovery&&<div className="fixed inset-0 z-50 bg-black/90 overflow-y-auto p-4"><div className="max-w-md mx-auto py-6"><h2 className="text-cyan-200 mb-3">密码找回 · 请设置新密码</h2><CloudAccountPanel /><button className="text-cyan-300 mt-3" onClick={()=>setRecovery(false)}>关闭</button></div></div>}</CloudContext.Provider>;
+ return <CloudContext.Provider value={{client,session,slots,status,busy,binding,pending,refresh,upload,restore,recoverLocal,retry:()=>pending && send(pending),cancelPending,leaderboard:session&&service?service.leaderboard:null,stop:()=>setBinding(null)}}>{children}</CloudContext.Provider>;
 }
 
 export function CloudAccountPanel() {
- const c=useCloud();const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[username,setUsername]=useState('');
+ const c=useCloud();const [password,setPassword]=useState(''),[username,setUsername]=useState(''),[newPassword,setNewPassword]=useState('');
  const [message,setMessage]=useState(''),[working,setWorking]=useState(false),[showHistory,setShowHistory]=useState<number|null>(null);
  if(!c)return null;
  const cls='w-full rounded-xl border border-border/40 bg-card/40 p-3 text-sm';
  async function action(fn:()=>Promise<any>){if(working)return;setWorking(true);setMessage('');try{await fn();}catch(e){setMessage((e as Error).message);}finally{setWorking(false);}}
- const redirect=location.origin+((window as any).__BASENAME__||'')+'/';
  const disabled=working||c.busy;
  return <section className="rounded-2xl border border-cyan-500/30 bg-card/40 p-4 space-y-3">
   <h3 className="font-semibold text-cyan-200">账号与云存档</h3>
   {!c.client?<p className="text-sm text-muted-foreground">Supabase 接入配置尚未部署。本机自动存档可继续使用。</p>:<>
   {!c.session?<>
-   <input className={cls} type="email" autoComplete="email" aria-label="邮箱" placeholder="邮箱" value={email} onChange={e=>setEmail(e.target.value)}/>
+   <input className={cls} autoComplete="username" aria-label="用户名" placeholder="用户名（3–24个汉字、字母、数字等）" maxLength={24} value={username} onChange={e=>setUsername(e.target.value)}/>
    <input className={cls} type="password" autoComplete="current-password" aria-label="密码" placeholder="密码（至少8位）" value={password} onChange={e=>setPassword(e.target.value)}/>
-   <input className={cls} autoComplete="nickname" aria-label="公开用户名" placeholder="公开用户名（注册时填写）" maxLength={24} value={username} onChange={e=>setUsername(e.target.value)}/>
    <div className="flex flex-wrap gap-3 text-sm text-cyan-300">
-    <button disabled={disabled} onClick={()=>action(async()=>{const {error}=await c.client.auth.signInWithPassword({email,password});if(error)throw error;setPassword('');})}>登录</button>
-    <button disabled={disabled} onClick={()=>action(async()=>{if(password.length<8 || !username.trim())throw new Error('请填写公开用户名和至少8位密码');const {data,error}=await c.client.auth.signUp({email,password,options:{data:{display_name:username.trim()},emailRedirectTo:redirect}});if(error)throw error;setPassword('');setMessage(data.session?'注册成功':'请检查邮箱并完成验证后登录');})}>注册</button>
-    <button disabled={disabled} onClick={()=>action(async()=>{const {error}=await c.client.auth.resetPasswordForEmail(email,{redirectTo:redirect});if(error)throw error;setMessage('如账号存在，系统将发送找回邮件，请检查邮箱');})}>忘记密码</button>
+    <button disabled={disabled} onClick={()=>action(async()=>{await loginUsername(c.client,username,password);setPassword('');})}>登录</button>
+    <button disabled={disabled} onClick={()=>action(async()=>{await registerUsername(c.client,username,password);setPassword('');setMessage('注册成功，已登录');})}>注册</button>
    </div>
+   <p className="text-xs text-muted-foreground">只需用户名和密码，无需邮箱或验证码。用户名不区分英文字母大小写，注册后作为固定登录名。请妥善保存密码，暂不支持忘记密码找回。</p>
   </>:<>
    <p className="text-sm">{c.session.user.user_metadata?.display_name||'已登录玩家'}</p>
    <div className="flex gap-3 text-sm text-cyan-300"><button disabled={disabled} onClick={()=>action(c.refresh)}>刷新云存档</button><button disabled={disabled} onClick={()=>action(async()=>{c.stop();const {error}=await c.client.auth.signOut();if(error)throw error;})}>退出账号</button></div>
-   <div className="flex gap-2"><input className={cls} type="password" autoComplete="new-password" aria-label="新密码" placeholder="设置新密码（找回后使用）" value={password} onChange={e=>setPassword(e.target.value)}/><button disabled={disabled} className="shrink-0 text-sm text-cyan-300" onClick={()=>action(async()=>{if(password.length<8)throw new Error('密码至少8位');const {error}=await c.client.auth.updateUser({password});if(error)throw error;setPassword('');c.finishRecovery();setMessage('密码已更新');})}>保存密码</button></div>
+   <div className="space-y-2"><input className={cls} type="password" autoComplete="current-password" aria-label="当前密码" placeholder="修改密码：先输入当前密码" value={password} onChange={e=>setPassword(e.target.value)}/><div className="flex gap-2"><input className={cls} type="password" autoComplete="new-password" aria-label="新密码" placeholder="新密码（至少8位）" value={newPassword} onChange={e=>setNewPassword(e.target.value)}/><button disabled={disabled} className="shrink-0 text-sm text-cyan-300" onClick={()=>action(async()=>{if(newPassword.length<8)throw new Error('新密码至少8位');const email=c.session.user.email;if(!email)throw new Error('账号信息不完整');const {error:check}=await c.client.auth.signInWithPassword({email,password});if(check)throw new Error('当前密码错误或暂时无法验证，请重试');const {error}=await c.client.auth.updateUser({password:newPassword});if(error)throw new Error('密码更新失败，请稍后重试');setPassword('');setNewPassword('');setMessage('密码已更新');})}>修改密码</button></div></div>
    {[1,2,3].map(slot=>{const s=c.slots.find((x:CloudSlot)=>x.slot===slot);return <div key={slot} className={cls+' space-y-2'}><p>存档位 {slot} · {s?`${s.payload.summary.name} Lv.${s.payload.summary.level} · 版本${s.revision}`:'空'}</p>{s&&<p className="text-xs text-muted-foreground">{new Date(s.updated_at).toLocaleString()}</p>}<div className="flex flex-wrap gap-3 text-cyan-300"><button disabled={disabled||!!c.pending} onClick={()=>{if(!s||confirm('将本机角色复制到这个云存档位？已有云存档会保留历史版本。'))void action(()=>c.upload(slot));}}>上传本机存档</button>{s&&<><button disabled={disabled||!!c.pending} onClick={()=>{if(confirm('读取云端存档到本机？本机角色会先备份，云端不会被覆盖。'))void action(()=>c.restore(s));}}>读取到本机</button><button onClick={()=>setShowHistory(showHistory===slot?null:slot)}>历史版本（{s.history.length}）</button></>}</div>{showHistory===slot&&s?.history.map((h:any)=><button key={h.revision} disabled={disabled||!!c.pending} className="block text-xs text-cyan-300" onClick={()=>{if(confirm('复制这个历史版本到本机？'))void action(()=>c.restore(s,h.payload));}}>版本{h.revision} · {new Date(h.updated_at).toLocaleString()} · {h.payload.summary.name}</button>)}</div>;})}
    {c.pending&&<div className="flex flex-wrap gap-3 text-sm text-amber-300"><button disabled={disabled} onClick={()=>action(c.retry)}>重试待确认上传（不会强制覆盖较新版本）</button><button disabled={disabled} onClick={()=>{if(confirm('取消待上传请求？本机角色与云端存档均保留。'))c.cancelPending();}}>取消待上传请求</button></div>}
    {c.binding&&<button className="text-xs text-cyan-300" onClick={c.stop}>暂停自动同步</button>}
