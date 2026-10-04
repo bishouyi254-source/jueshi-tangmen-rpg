@@ -3542,7 +3542,7 @@ function __fbRestoreSpirits(spirits,saved) {
         )}
 
         {/* 底部操作区 - flex-shrink-0 防挤压，始终可见 */}
-        <div className="relative z-10 flex-shrink-0 border-t border-cyan-500/20 bg-card px-2 md:px-8 pt-2 md:pt-3 pb-[max(10px,env(safe-area-inset-bottom))] text-foreground shadow-lg">
+        <div className="battle-action-footer relative z-10 flex-shrink-0 border-t border-cyan-500/20 bg-card px-2 md:px-8 pt-2 md:pt-3 pb-[max(10px,env(safe-area-inset-bottom))] text-foreground shadow-lg">
          {/* 胜利 / 失败 / 逃跑 结算界面 */}
          {(phase === 'victory' || phase === 'defeat' || phase === 'flee') && (
            <div className="flex flex-col">
@@ -3705,9 +3705,20 @@ function __fbRestoreSpirits(spirits,saved) {
            </div>
          )}
 
+        <style>{`
+.battle-action-footer{max-height:58vh;overflow-y:auto;overscroll-behavior:contain}
+.battle-body-actions{display:flex;justify-content:center;gap:6px;width:100%}
+.battle-body-actions>button{flex:1;min-width:0;max-width:180px;min-height:36px;height:auto;padding:4px 6px;line-height:14px}
+.battle-body-actions .battle-armor-button{flex-direction:column;gap:0}
+.battle-armor-button{min-width:0;min-height:36px;padding:5px 8px;border:1px solid rgba(6,182,212,.3);border-radius:8px;color:#a5f3fc;background:rgba(8,51,68,.3);display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;line-height:16px}
+.battle-armor-button:disabled{opacity:.4;cursor:not-allowed}
+.battle-armor-meta{font-size:10px;color:#67c5d7}
+.battle-action-panel [data-twin-skills],.battle-action-panel [data-blood-skills]{padding:8px;margin-bottom:0}
+@media(max-width:480px){.battle-armor-button{flex-direction:column;gap:0;min-height:40px;padding:3px 6px}.battle-action-footer{max-height:56vh}}
+`}</style>
         {/* 进行中（intro/playerTurn/enemyTurn）的操作面板 - 始终渲染 */}
         {(phase === 'playerTurn' || phase === 'enemyTurn') && (
-          <div className="space-y-2 md:space-y-3 max-w-4xl mx-auto w-full">
+          <div className="battle-action-panel space-y-1.5 max-w-4xl mx-auto w-full">
             {/* 双生武魂魂技切换Tab */}
             {isTwinSoul && (
               <div className="flex gap-1 mb-1">
@@ -3914,14 +3925,18 @@ function __fbRestoreSpirits(spirits,saved) {
               </div>
             )}
 
-            {/* 武魂真身按钮：双生对称2列，单生1列居中 */}
-            {(playerSoulRings.length >= 7 || (isTwinSoul && secondSoulRings.length >= 7)) && (
-               <div className={`grid gap-2 md:gap-3 mx-auto ${isTwinSoul && secondSoulRings.length >= 7 ? 'grid-cols-2 w-full max-w-md' : 'grid-cols-1 w-full max-w-[200px]'}`}>
+            {/* 斗铠领域 / 真身 / 斗铠振奋：同行，斗铠位于左右两侧 */}
+            {(playerSoulRings.length>=7 || (isTwinSoul && secondSoulRings.length>=7) || (dragonProgress(player).equipped && armorTier(player)>=2)) && <div className="battle-body-actions" data-body-actions>
+            {dragonProgress(player).equipped && armorTier(player)>=3 && <button data-armor-domain title={armorDomainDescription(dragonProgress(player).style,armorTier(player))} className="battle-armor-button" disabled={phase!=='playerTurn'||armorDomainRef.current.used||domainActive||secondDomainActive||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={()=>{
+ if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;
+ const r=startArmorDomain(player,armorDomainRef.current,currentSoulPower,attrs.maxSoulPower,domainActive||secondDomainActive);if(r.reason){toast.info(r.reason);return;}
+ actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-r.cost));__armorCommit(r.state);addLog('展开斗铠领域·'+ARMOR_DOMAIN_NAMES[r.state.style]+'，持续后续'+r.state.turns+'次己方行动，本次不追加普攻。','skill');scheduleEnemyAction(600);
+ }}><span>斗铠领域</span><span className="battle-armor-meta">{armorDomainRef.current.turns?'剩余'+armorDomainRef.current.turns+'次':armorDomainRef.current.used?'已使用':'魂力 '+formatNumber(Math.ceil(attrs.maxSoulPower*.15))}</span></button>}
               {playerSoulRings.length >= 7 && (
                 <button
                    onClick={() => handleToggleTrueBody(0)}
                    disabled={phase !== 'playerTurn' || (trueBodyTurns === 0 && trueBodyCooldown > 0) || (trueBodyTurns === 0 && currentSoulPower < getTrueBodyCost())}
-                   className={`h-8 md:h-10 rounded-md md:rounded-lg text-[10px] md:text-xs font-bold flex items-center justify-center gap-0.5 md:gap-1 transition-all border
+                   className={`h-8 rounded-md text-[10px] md:text-xs font-bold flex items-center justify-center gap-0.5 md:gap-1 transition-all border
                     ${trueBodyTurns > 0
                       ? 'bg-gradient-to-r from-cyan-600 to-cyan-400 text-white border-cyan-300 shadow-md shadow-cyan-500/30 animate-pulse'
                       : 'bg-gradient-to-r from-cyan-100 to-yellow-100 text-cyan-200 border-cyan-300/50 hover:from-cyan-200 hover:to-yellow-200'}
@@ -3953,8 +3968,15 @@ function __fbRestoreSpirits(spirits,saved) {
                       : '开二武魂真身'}
                 </button>
               )}
-            </div>
-            )}
+            {dragonProgress(player).equipped && armorTier(player)>=2 && <button data-armor-heal title="恢复最大气血3%，每场一次，占用本次行动" className="battle-armor-button" disabled={phase!=='playerTurn'||!!(battleState?.meta as any)?.armorUsed||currentSoulPower<Math.ceil(attrs.maxSoulPower*.1)} onClick={()=>{
+                if(phase!=='playerTurn'||actionLockRef.current||!__fbSkillAllowed()||(battleState?.meta as any)?.armorUsed)return;
+                const cost=Math.ceil(attrs.maxSoulPower*.1);if(currentSoulPower<cost)return;
+                actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-cost));
+                setPlayerHp(v=>Math.min(attrs.hp,v+Math.floor(attrs.hp*.03)));
+                setBattleState(prev=>prev?({...prev,meta:{...prev.meta,armorUsed:true}} as any):prev);
+                addLog('斗铠振奋：恢复最大气血3%，本次行动结束。','skill');scheduleEnemyAction(600);
+              }}><span>斗铠振奋</span><span className="battle-armor-meta">{(battleState?.meta as any)?.armorUsed?'已使用':'魂力 '+formatNumber(Math.ceil(attrs.maxSoulPower*.1))}</span></button>}
+            </div>}
 
             {/* 🔴 v22.0 自动战斗控制条 */}
             <div className="flex items-center justify-between gap-2 w-full mb-1">
@@ -3986,19 +4008,6 @@ function __fbRestoreSpirits(spirits,saved) {
               </div>
             </div>
 
-            {dragonProgress(player).equipped && armorTier(player)>=3 && <div className="mb-2 rounded-xl border border-cyan-500/30 p-3 bg-cyan-950/30" data-armor-domain><div className="text-xs text-cyan-300 mb-2">{armorDomainRef.current.turns?'斗铠领域·'+ARMOR_DOMAIN_NAMES[armorDomainRef.current.style]+'：剩余 '+armorDomainRef.current.turns+' 次行动':armorDomainDescription(dragonProgress(player).style,armorTier(player))}</div><button className="w-full rounded-lg p-3 border border-cyan-500/40 text-cyan-200 disabled:opacity-40" disabled={phase!=='playerTurn'||armorDomainRef.current.used||domainActive||secondDomainActive||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={()=>{
- if(phase!=='playerTurn'||actionLockRef.current||battleEndedRef.current||!__fbSkillAllowed())return;
- const r=startArmorDomain(player,armorDomainRef.current,currentSoulPower,attrs.maxSoulPower,domainActive||secondDomainActive);if(r.reason){toast.info(r.reason);return;}
- actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-r.cost));__armorCommit(r.state);addLog('展开斗铠领域·'+ARMOR_DOMAIN_NAMES[r.state.style]+'，持续后续'+r.state.turns+'次己方行动，本次不追加普攻。','skill');scheduleEnemyAction(600);
- }}>斗铠领域 · {armorDomainRef.current.used?'本场已使用':'魂力 '+Math.ceil(attrs.maxSoulPower*.15)}</button></div>}
-            {dragonProgress(player).equipped && armorTier(player)>=2 && <button className="w-full mb-2 p-3 rounded-lg border border-cyan-500/30 text-cyan-200 bg-cyan-950/30 disabled:opacity-40" disabled={phase!=='playerTurn'||!!(battleState?.meta as any)?.armorUsed||currentSoulPower<Math.ceil(attrs.maxSoulPower*.1)} onClick={()=>{
-                if(phase!=='playerTurn'||actionLockRef.current||!__fbSkillAllowed()||(battleState?.meta as any)?.armorUsed)return;
-                const cost=Math.ceil(attrs.maxSoulPower*.1);if(currentSoulPower<cost)return;
-                actionLockRef.current=true;setCurrentSoulPower(v=>Math.max(0,v-cost));
-                setPlayerHp(v=>Math.min(attrs.hp,v+Math.floor(attrs.hp*.03)));
-                setBattleState(prev=>prev?({...prev,meta:{...prev.meta,armorUsed:true}} as any):prev);
-                addLog('斗铠振奋：恢复最大气血3%，本次行动结束。','skill');scheduleEnemyAction(600);
-              }}>斗铠振奋 · 每场一次 · 魂力 {Math.ceil(attrs.maxSoulPower*.1)}</button>}
             {twinActiveStage(player)>0&&<div className="mb-2 rounded-xl border border-cyan-500/30 p-3 text-cyan-200" data-twin-skills><div className="text-xs mb-2">金银共鸣 · 生效{twinActiveStage(player)}阶 · 攻击技能+{Math.round(twinRate(player,goldBattleRef.current,silverBattleRef.current)*100)}%（含当前双域联动）</div><div className="flex flex-wrap gap-2">{TWIN_SKILLS.filter(x=>twinActiveStage(player)>=x.stage).map(x=>{const ready=twinSkillReady(player,twinRef.current,x.id,bloodRef.current.turn,currentSoulPower,attrs.maxSoulPower,goldBattleRef.current,silverBattleRef.current);return <button key={x.id} data-twin-skill={x.id} data-auto-allowed={x.id!=='break'||!!player.twinAutoBreak} className="rounded-lg p-2 border border-cyan-500/30 text-xs disabled:opacity-40" disabled={phase!=='playerTurn'||skillBanTurns>0||!!ready.reason} title={ready.reason||x.desc} onClick={()=>__useTwin(x.id)}>{x.name} · 魂力{ready.cost}{ready.reason?' · '+ready.reason:''}</button>;})}</div><label className="text-xs block mt-2"><input type="checkbox" checked={!!player.twinAutoBreak} onChange={e=>setPlayer(p=>({...p,twinAutoBreak:e.target.checked}))}/> 允许控制台自动释放本场一次的破界（默认关闭）</label></div>}
             {goldEvolutions(player).state>0&&<div className="mb-2 rounded-xl border border-yellow-500/30 p-3 text-yellow-200" data-blood-skills><div className="text-xs mb-2">特殊状态 · 本次不追加普通攻击</div><button className="rounded-lg p-2 border border-yellow-500/30 disabled:opacity-40" disabled={phase!=='playerTurn'||skillBanTurns>0||(bloodRef.current.cooldowns.transform||0)>bloodRef.current.turn||currentSoulPower<Math.ceil(attrs.maxSoulPower*.15)} onClick={__useBloodTransform}>血龙变 · 魂力 {Math.ceil(attrs.maxSoulPower*.15)} · 冷却6次行动</button></div>}
             {/* 操作按钮行：固定4列对称布局 — 普攻 / 领域 / 二领域 / 逃跑 */}
