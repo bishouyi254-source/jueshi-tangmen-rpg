@@ -20,7 +20,7 @@ export function cloudService(client: SupabaseClient) {
       return call('rpg_write_save',{p_slot:slot,p_revision:revision,p_operation:operationId,p_payload:payload});
     },
     leaderboard: {
-      list: ()=>call('rpg_leaderboard'),
+      list: query=>call('rpg_leaderboard_v2',{p_direction:query?.direction||'',p_metric:query?.metric||'current'}),
       profile: async publicId=>{
         const p=await call('rpg_public_profile',{p_id:publicId});
         return {...p,current:displaySnapshot(p.current),history:p.history.map(displaySnapshot)};

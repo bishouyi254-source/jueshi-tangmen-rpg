@@ -5,6 +5,7 @@ import {normalizeSilver,readSilverBlood,reincarnateSilver,silverBonuses,createSi
 import {normalizeGoldKing} from './goldKing';
 import {normalizeGoldBlood,readGoldBlood,goldBloodBonuses,createGoldBattle,settleGoldBlood} from './goldDominance';
 import {bloodlineProgress,valleyProgress,bloodlineBonuses,valleyAction,reincarnateBloodline,reincarnateValley} from './dragonBloodline';
+import {publicGrowth} from './publicGrowth';
 import {abyssProgress,abyssAction,reincarnateAbyss} from './abyssFrontier';
 import { STAMINA_CAP, godLevelExp, freshGrowthRules, migrateGrowthRules, godBreakthroughError, applyGodBreakthrough, type GrowthRules } from '@/lib/growthBatch3';
 import { hasLiehun, readNianBonus, createLiehunLedger, settleLiehunGrowth, type LiehunLedger, type NianBonus } from '@/lib/liehunGrowth';
@@ -1595,6 +1596,7 @@ export interface IAttrs {
 
 // 转世轮回 - 轮回球（每一世的记录快照）
 export interface IReincarnationOrb {
+  publicGrowth?: import('./publicGrowth').PublicGrowth;
   dragonBloodline?: import('./dragonBloodline').BloodlineProgress;
   dragonLegend?: import('./dragonLegend').DragonProgress;
   index: number;           // 第几世（1-based）
@@ -5915,6 +5917,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
      // 2. 构建轮回球
      const orb: IReincarnationOrb = {
+       publicGrowth: publicGrowth(player),
        index: prevCount + 1,
        timestamp: Date.now(),
        name: player.name,

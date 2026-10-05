@@ -1,4 +1,6 @@
+import {formatNumber} from '@/lib/utils';
 import ShadowComparison from '@/components/ShadowComparison';
+import {PublicLoadout} from './PublicGrowthPanel';
 import {__localBuildShadow} from '@/lib/shadow';
 import {toast} from 'sonner';
 import { useState, useMemo, memo } from 'react';
@@ -86,21 +88,8 @@ export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, 
               const critVal = (orb.attributes.critRate || 0) * 100 + (orb.attributes.critDmg || 0) * 50;
               const soulVal = orb.attributes.maxSoulPower || 0;
                const power = Math.round((base + critVal + soulVal) * 0.5);
-               // 战力单位规则：不足千万用万，千万及以上用亿
-               let powerDisplay: string;
-               let showUnit: string | null = null;
-               if (power >= 10000000) {
-                 // 千万及以上 → 亿
-                 powerDisplay = (power / 100000000).toFixed(power >= 100000000 ? 1 : 1);
-                 showUnit = '亿';
-               } else if (power >= 10000) {
-                 // 万以上、千万以下 → 万
-                 powerDisplay = (power / 10000).toFixed(1);
-                 showUnit = '万';
-               } else {
-                 powerDisplay = String(power);
-                 showUnit = null;
-               }
+               const powerDisplay=formatNumber(power);
+               const showUnit=null;
               return (
                 <motion.button
                   key={orb.index}
@@ -162,7 +151,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+            className={readOnly && currentView?'relative':'fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4'}
             onClick={() => setSelectedOrb(null)}
           >
             <motion.div
@@ -170,7 +159,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, 
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-purple-500/40 bg-gradient-to-b from-purple-950/95 to-indigo-950/95 p-5 shadow-2xl"
+              className={readOnly && currentView?'w-full rounded-xl border border-border/40 bg-card/40 p-4':'w-full max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto rounded-xl border border-purple-500/40 bg-gradient-to-b from-purple-950/95 to-indigo-950/95 p-5 shadow-2xl'}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -227,6 +216,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, 
                 </div>
               </div>
 
+            {readOnly && <div className="mb-3"><PublicLoadout orb={selectedOrb}/></div>}
             {!readOnly && <><ShadowComparison orb={selectedOrb} current={attributes}/>
             <button className="w-full mb-3 rounded-lg p-3 bg-purple-700" onClick={()=>{try{const cfg=__localBuildShadow(selectedOrb);cfg.meta.shadowOrb=selectedOrb;cfg.meta.expReward=Math.max(1000,selectedOrb.level**2*20);cfg.meta.coinReward=Math.max(500,selectedOrb.level*500);onClose();startBattle(cfg);}catch(err){toast.error(err.message);}}}>挑战轮回之影 · 第{selectedOrb.index}世</button></>}
               {/* 五维属性 */}
@@ -239,31 +229,31 @@ export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, 
                   <div className="rounded-md bg-black/20 py-2">
                     <div className="text-[10px] text-muted-foreground mb-0.5">攻击</div>
                     <div className="text-sm font-semibold text-red-300 tabular-nums">
-                      {(selectedOrb.attributes.attack / 10000).toFixed(1)}万
+                      {formatNumber(selectedOrb.attributes.attack)}
                     </div>
                   </div>
                   <div className="rounded-md bg-black/20 py-2">
                     <div className="text-[10px] text-muted-foreground mb-0.5">防御</div>
                     <div className="text-sm font-semibold text-blue-300 tabular-nums">
-                      {(selectedOrb.attributes.defense / 10000).toFixed(1)}万
+                      {formatNumber(selectedOrb.attributes.defense)}
                     </div>
                   </div>
                   <div className="rounded-md bg-black/20 py-2">
                     <div className="text-[10px] text-muted-foreground mb-0.5">速度</div>
                     <div className="text-sm font-semibold text-yellow-300 tabular-nums">
-                      {(selectedOrb.attributes.speed / 10000).toFixed(1)}万
+                      {formatNumber(selectedOrb.attributes.speed)}
                     </div>
                   </div>
                   <div className="rounded-md bg-black/20 py-2">
                     <div className="text-[10px] text-muted-foreground mb-0.5">精神</div>
                     <div className="text-sm font-semibold text-purple-300 tabular-nums">
-                      {(selectedOrb.attributes.spirit / 10000).toFixed(1)}万
+                      {formatNumber(selectedOrb.attributes.spirit)}
                     </div>
                   </div>
                   <div className="rounded-md bg-black/20 py-2">
                     <div className="text-[10px] text-muted-foreground mb-0.5">气血</div>
                     <div className="text-sm font-semibold text-pink-300 tabular-nums">
-                      {(selectedOrb.attributes.hp / 10000).toFixed(0)}万
+                      {formatNumber(selectedOrb.attributes.hp)}
                     </div>
                   </div>
                 </div>
@@ -378,7 +368,7 @@ export default memo(function ReincarnationHistoryPanel({ onClose, externalOrbs, 
                   <Shield className="h-4 w-4 text-yellow-400 mx-auto mb-0.5" />
                   <div className="text-[10px] text-muted-foreground">魂币</div>
                   <div className="font-semibold text-sm tabular-nums">
-                    {(selectedOrb.soulCoins / 10000).toFixed(0)}万
+                    {formatNumber(selectedOrb.soulCoins)}
                   </div>
                 </div>
               </div>

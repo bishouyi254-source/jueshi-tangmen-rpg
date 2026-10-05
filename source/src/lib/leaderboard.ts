@@ -1,14 +1,18 @@
 import type { IReincarnationOrb, IPlayer, IAttrs } from './gameStore';
 import { DIVINE_TRIALS } from '@/data/divineTrials';
+import {publicGrowth,sanitizePublicGrowth} from './publicGrowth';
+import {formatNumber} from './utils';
+export const RANK_DIRECTIONS=['强攻系','敏攻系','控制系','辅助系','防御系'] as const;
+export type RankQuery={direction?:string;metric?:'current'|'history'};
 export interface PublicProfile {
   publicId: string;
   updatedAt: number;
   current: IReincarnationOrb;
   history: IReincarnationOrb[];
 }
-export interface RankEntry { publicId: string; rank: number; name: string; level: number; power: number; }
+export interface RankEntry { publicId: string; rank: number; name: string; level: number; power: number; index?:number;direction?:string;historyPower?:number;historyIndex?:number;updatedAt?:number; }
 export interface LeaderboardAPI {
-  list(): Promise<{ entries: RankEntry[]; self: RankEntry | null; updatedAt: number }>;
+  list(query?:RankQuery): Promise<{ entries: RankEntry[]; self: RankEntry | null; updatedAt: number }>;
   profile(publicId: string): Promise<PublicProfile>;
   publish?(profile: PublicProfile, consent: boolean): Promise<unknown>;
 }
@@ -16,11 +20,11 @@ export const combatPower = (a: Partial<IAttrs>) => Math.round((
   (a.attack || 0) + (a.defense || 0) + (a.speed || 0) + (a.spirit || 0) +
   (a.hp || 0) + (a.critRate || 0) * 100 + (a.critDmg || 0) * 50 + (a.maxSoulPower || 0)
 ) * .5);
-export const powerText = (n: number) => n >= 1e8 ? (n / 1e8).toFixed(2) + '亿' : n >= 1e4 ? (n / 1e4).toFixed(2) + '万' : n.toLocaleString();
+export const powerText = formatNumber;
 // Only display fields; never send the full player/save code, account info or auth session.
 const pick = (value: any, keys: string[]) => Object.fromEntries(keys.filter(k => value?.[k] !== undefined).map(k => [k, value[k]]));
 function soul(s: any) { return s ? pick(s, ['id','name','quality','type','direction','element','extremeAttribute','image','imageId','description']) : null; }
-function item(x: any) { return pick(x, ['id','name','type','quality','quantity','description','image','imageId','year','years','element','beastAttribute','slot','attackBonus','defenseBonus','speedBonus','spiritBonus','hpBonus','critRateBonus','critDmgBonus','soulPowerBonus','skillDamage','skillName','skillDescription']); }
+function item(x: any) { return {...pick(x, ['id','name','type','quality','quantity','description','image','imageId','year','years','element','beastAttribute','slot','attackBonus','defenseBonus','speedBonus','spiritBonus','hpBonus','critRateBonus','critDmgBonus','soulPowerBonus','skillDamage','skillDamagePct','skillName','skillDescription','skillDesc','skillType']),...(x?.attributes?{attributes:pick(x.attributes,['attack','defense','speed','spirit','hp','critRate','critDmg','soulPower','allAttr'])}:{})}; }
 export function displaySnapshot(orb: IReincarnationOrb): IReincarnationOrb {
   const out = pick(orb, ['index','timestamp','name','level','realm','direction','isTwinSoul','soulCoins','inventoryCount','recruitedCount','teamCount','domainName','divineTrialName']);
   return { ...out, martialSoul: soul(orb.martialSoul), secondSoul: soul(orb.secondSoul),
@@ -29,11 +33,15 @@ export function displaySnapshot(orb: IReincarnationOrb): IReincarnationOrb {
     soulBones: Object.fromEntries(Object.entries(orb.soulBones || {}).map(([k,v]) => [k,v ? item(v) : null])),
     equipment: Object.fromEntries(Object.entries(orb.equipment || {}).map(([k,v]) => [k,v ? item(v) : null])),
     inventory: (orb.inventory || []).map(item), soulSpirits: (orb.soulSpirits || []).map(x => pick(x,['id','name','quality','level','years','year']))
+    ,publicGrowth:sanitizePublicGrowth(orb.publicGrowth)
   } as IReincarnationOrb;
+}
+export function strongestLife(current:IReincarnationOrb,history:IReincarnationOrb[]) {
+ return [current,...history].reduce((best,o)=>combatPower(o.attributes)>best.power?{power:combatPower(o.attributes),index:o.index}:best,{power:combatPower(current.attributes),index:current.index});
 }
 export function ownProfile(p: IPlayer, attributes: IAttrs, history: IReincarnationOrb[], realm: string): PublicProfile {
   const current = displaySnapshot({
-    index: (p.reincarnation?.count || 0) + 1, timestamp: Date.now(), name: p.name, level: p.level, realm,
+    index: (p.reincarnation?.count || 0) + 1, timestamp: Date.now(), name: p.name, level: p.level, realm,publicGrowth:publicGrowth(p),
     direction: p.direction, martialSoul: p.martialSoul, secondSoul: p.secondSoul, isTwinSoul: p.isTwinSoul,
     soulRings: p.soulRings, secondSoulRings: p.secondSoulRings || [], soulBones: p.soulBones,
     equipment: p.equipment, soulSpirits: p.soulSpirits || [], soulCoins: p.soulCoins,
@@ -56,7 +64,7 @@ export function cloudbaseLeaderboardAPI(call: (data: unknown) => Promise<any>): 
     return result.data;
   }
   return {
-    list: () => invoke({action:'list'}),
+    list: query => invoke({action:'list',...query}),
     publish: (profile, consent) => invoke({action:'publish', consent, profile:{current:displaySnapshot(profile.current),history:profile.history.map(displaySnapshot)}}),
     profile: async publicId => {
       const p = await invoke({action:'profile',publicId});
