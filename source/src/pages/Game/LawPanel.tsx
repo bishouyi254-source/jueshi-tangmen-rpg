@@ -105,7 +105,7 @@ export default function LawPanel({ onClose, onBack }: LawPanelProps) {
         <div className="text-center">
           <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <div>尚未解锁神级修炼</div>
-          <div className="text-xs mt-1">继承神位并击败混沌茶后开启</div>
+          <div className="text-xs mt-1">继承神位后开启</div>
         </div>
       </div>
     );

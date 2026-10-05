@@ -9,7 +9,7 @@ import {abyssProgress,abyssAction,reincarnateAbyss} from './abyssFrontier';
 import { STAMINA_CAP, godLevelExp, freshGrowthRules, migrateGrowthRules, godBreakthroughError, applyGodBreakthrough, type GrowthRules } from '@/lib/growthBatch3';
 import { hasLiehun, readNianBonus, createLiehunLedger, settleLiehunGrowth, type LiehunLedger, type NianBonus } from '@/lib/liehunGrowth';
 import { filterSweepDrops, normalizeSweepYears, type SweepFilterSummary } from '@/lib/sweepFilter';
-import { hasDefeatedHundun, reconcileGodUnlock } from '@/lib/godUnlock';
+import { reconcileGodUnlock } from '@/lib/godUnlock';
 import {dragonAction,dragonProgress,armorBonuses,evolutionMultiplier,reincarnateDragon} from '@/lib/dragonLegend';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react';
 import { scopedStorage, logger } from '@lark-apaas/client-toolkit-lite';
@@ -889,7 +889,7 @@ export interface IPlayer {
        supremeArtifacts: string[];
        // 🔴 v22.0 百级以上神级修炼系统
        godLevelProgress: {
-         unlocked: boolean;             // 是否已解锁100级以上（继承神位+击败混沌茶）
+         unlocked: boolean;             // 是否已解锁100级以上（继承神位即可）
          currentTier: 'second' | 'first' | 'king' | 'supreme'; // 神位等级，决定等级上限
          levelCap: number;              // 当前等级上限（139/149/159/169）
        };
@@ -6806,24 +6806,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
           if (curLevel >= 99) {
             // 百级以上逻辑：已解锁神级修炼且未达等级上限时可继续升级
             const glp = p.divineTrial?.godLevelProgress;
-            // 🔴 自动解锁：继承神位 + 击败混沌茶 → 自动解锁百级修炼
-            let newDivTrial = p.divineTrial;
+            // 继承神位后自动解锁百级修炼。
             if (!glp?.unlocked && p.divineTrial?.inherited) {
-              const hundunDetail = p.companions?.details?.['tc-hunduncha'];
-              if (hasDefeatedHundun(p)) {
-                const trial = DIVINE_TRIALS.find(t => t.id === p.divineTrial!.chosenTrialId);
-                const tier = (trial?.tier as 'second' | 'first' | 'king' | 'supreme') || 'second';
-                const cap = getGodLevelCap(tier);
-                newDivTrial = {
-                  ...p.divineTrial!,
-                  godLevelProgress: {
-                    unlocked: true,
-                    currentTier: tier,
-                    levelCap: cap,
-                  },
-                };
-                p = { ...p, divineTrial: newDivTrial };
-              }
+              p = reconcileGodUnlock(p);
             }
             const actualGlp = p.divineTrial?.godLevelProgress;
             if (actualGlp?.unlocked && curLevel < actualGlp.levelCap) {
@@ -8718,37 +8703,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return 139; // second
   }
 
-  /** 解锁百级神级修炼（继承神位+击败混沌茶后调用） */
+  /** 解锁百级神级修炼（继承神位即可） */
   const unlockGodLevelCultivation = () => {
-    setPlayer((p) => {
-      if (!p.divineTrial?.inherited) return p;
-      // 确认击败过混沌茶（在伴侣details中）
-      const hundunDetail = p.companions?.details?.['tc-hunduncha'];
-      if (!hasDefeatedHundun(p)) return p;
-      if (p.divineTrial.godLevelProgress?.unlocked) return p;
-      const trial = DIVINE_TRIALS.find((t) => t.id === p.divineTrial!.chosenTrialId);
-      const tier = (trial?.tier as 'second' | 'first' | 'king' | 'supreme') || 'second';
-      const cap = getGodLevelCap(tier);
-      return {
-        ...p,
-        divineTrial: {
-          ...p.divineTrial!,
-          godLevelProgress: {
-            unlocked: true,
-            currentTier: tier,
-            levelCap: cap,
-          },
-        },
-      };
-    });
+    setPlayer((p) => reconcileGodUnlock(p));
   };
 
-  /** 检查是否可以解锁百级修炼（条件：继承神位 + 击败混沌茶） */
+  /** 检查是否可以解锁百级修炼（条件：继承神位） */
   const canUnlockGodLevel = (): boolean => {
-    if (!player?.divineTrial?.inherited) return false;
-    const hundunDetail = player.companions?.details?.['tc-hunduncha'];
-    if (!hasDefeatedHundun(player)) return false;
-    return true;
+    return player?.divineTrial?.inherited === true;
   };
 
   /** 选择法则碎片（百级后每升2级获得1枚，由玩家选择类型） */
