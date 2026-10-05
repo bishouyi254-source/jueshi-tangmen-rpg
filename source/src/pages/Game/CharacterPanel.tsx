@@ -1,3 +1,4 @@
+import {hasJiYue,jiYueCount} from '@/lib/jiYue';
 import DragonAttributeSources from './DragonAttributeSources';
 import { hasLiehun, readNianBonus } from '@/lib/liehunGrowth';
 import { useState, useMemo, useEffect, memo } from 'react';
@@ -808,6 +809,7 @@ export default function CharacterPanel() {
             <div>精神转攻击 +{formatNumber(attrs.spirit * 3)} · 已结算 {readNianBonus(player.nianBonus).count} 场</div>
             <p className="text-muted-foreground">胜利后每1京玩家直接扣血增长1点精神；升灵台与轮回之影不计入，转世重置。</p>
           </div>}
+          {hasJiYue(player) && <div className="mt-3 p-3 rounded-lg border border-violet-500/30 bg-violet-950/20 text-xs space-y-1"><h4 className="font-semibold text-violet-300">寂月仙剑 · 雷霆战意</h4><div>累计胜利 {jiYueCount(player)} 场 · 永久攻击 +{jiYueCount(player)}%</div><p className="text-muted-foreground">每场战斗胜利增加1%攻击，无上限；主修或有效次修生效，转世保留累计次数。</p></div>}
           {/* 🔴 混沌无极武魂·吞噬天赋面板 */}
            {(player.martialSoul.name === '混沌无极' || (player.isTwinSoul && player.secondSoul?.name === '混沌无极')) && player.devour && player.devour.count > 0 && (
              <div className="mt-3 pt-3 border-t border-purple-500/20">

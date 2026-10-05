@@ -1,6 +1,6 @@
 // Non-element extremes improve stats, but never become an element through name inference.
 const STAT_ONLY=/^(?:极致之)?(?:力量|速度|敏捷|防御|辅助)(?:属性)?$/;
-export const ALL_ELEMENTS=['金','木','水','火','土','冰','光','暗','时间','空间','精神'];
+export const ALL_ELEMENTS=['金','木','水','火','雷','土','冰','光','暗','时间','空间','精神'];
 export function elementSet(value:any,normalize:(v:string)=>string){
  const out=new Set<string>();
  for(const part of String(value||'').split(/[·/、,，+|]/)){

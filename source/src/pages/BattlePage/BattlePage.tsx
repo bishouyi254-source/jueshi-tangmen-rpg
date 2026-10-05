@@ -142,7 +142,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
         checkAndStoreFavorTrigger,
         challengeCompanionWin,
         claimShadowVictory,
-        settleLiehunVictory,
+        settleLiehunVictory, settleJiYueBattle,
         challengeCompanionLose,
         devourBeast,
         recordTeaDefeat,
@@ -645,7 +645,7 @@ export default memo(function BattlePage(props: BattlePageProps = {}) {
     settleLiehunVictory(ledger,'victory');
     if(!ledger.settled){liehunRef.current={...ledger,settled:true};setBattleState(prev=>prev?{...prev,meta:{...prev.meta,liehunGrowth:liehunRef.current}}:prev);}
   }
-  useEffect(()=>{if(phase==='victory' && battleInitRef.current)settleDirectGrowth();},[phase,battleState?.meta?.liehunGrowth?.id]);
+  useEffect(()=>{if(phase==='victory' && battleInitRef.current){settleDirectGrowth();settleJiYueBattle(battleState?.meta?.jiYueBattleId,'victory');}},[phase,battleState?.meta?.liehunGrowth?.id,battleState?.meta?.jiYueBattleId]);
   useEffect(()=>{const old=goldBattleRef.current;if(!battleInitRef.current||!old||!['victory','defeat','flee'].includes(phase)||old.settled)return;
     const progress=readGoldBlood(player?.goldBlood),gain=phase==='victory'&&!progress.claimed.includes(old.id)?Math.min(old.reward,2000-progress.points):0;
     if(phase==='victory')setPlayer(p=>settleGoldBlood(p,old,'victory'));

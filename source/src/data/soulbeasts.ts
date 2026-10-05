@@ -287,7 +287,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.24,
     skills: [{ name: '电光闪', desc: '化作一道电光冲击' }],
     description: '身披电光的小型飞禽魂兽',
-    element: '火属性',
+    element: '雷属性',
   },
   // 风属性
   {
@@ -604,7 +604,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.25,
     skills: [{ name: '雷击术', desc: '召唤雷电劈击敌人' }],
     description: '纯粹雷元素凝聚而成的灵体魂兽',
-    element: '火属性',
+    element: '雷属性',
   },
   {
     id: 'dian-man',
@@ -616,7 +616,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.18,
     skills: [{ name: '雷电吐息', desc: '释放电弧麻痹敌人' }],
     description: '通体带电的鳗鱼魂兽，擅长麻痹攻击',
-    element: '火属性',
+    element: '雷属性',
   },
   // 风属性
   {
@@ -1550,7 +1550,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.22,
     skills: [{ name: '闪电突袭', desc: '化身为雷电瞬间突进' }],
     description: '速度如闪电的雷属性魂兽',
-    element: '火属性',
+    element: '雷属性',
   },
   {
     id: 'an-ying-shu',
@@ -1672,7 +1672,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.17,
     skills: [{ name: '雷霆一击', desc: '召唤雷电附在拳头上轰出' }],
     description: '身披紫色雷光的猿类魂兽',
-    element: '火属性',
+    element: '雷属性',
   },
   {
     id: 'jin-chi-ying',
@@ -1813,7 +1813,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.14,
     skills: [{ name: '雷霆万钧', desc: '召唤雷电轰击敌人' }],
     description: '上三宗蓝电霸王龙家族传承武魂的野生幼体',
-    element: '火属性',
+    element: '雷属性',
   },
   // 风属性
   {
@@ -2144,7 +2144,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.2,
     skills: [{ name: '紫霄神雷', desc: '九天神雷之紫霄，一击出万雷齐发' }],
     description: '雷霆之主，万年级紫霄神雷兽',
-    element: '火属性',
+    element: '雷属性',
   },
   // 风属性
   {
@@ -2331,7 +2331,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.2,
     skills: [{ name: '万雷齐发', desc: '召唤万千雷电从天而降' }],
     description: '十万年级雷属性瑞兽，雷霆之主',
-    element: '火属性',
+    element: '雷属性',
   },
   {
     id: 'ming-he-jiu-wei',
@@ -2532,7 +2532,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.14,
     skills: [{ name: '雷霆万钧', desc: '一吼雷鸣千里，雷霆万钧' }],
     description: '上古夔牛，一吼而雷霆千里，十万年雷属性至尊',
-    element: '火属性',
+    element: '雷属性',
   },
   // 风属性
   {
@@ -2819,7 +2819,7 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     baseSpdPerYear: 0.28,
     skills: [{ name: '九天雷霆', desc: '九天之上降下的神罚之雷' }],
     description: '执掌天罚的雷属性神兽',
-    element: '火属性',
+    element: '雷属性',
   },
   {
     id: 'da-guang-ming-shen-long',
@@ -3336,6 +3336,196 @@ export const SOUL_BEAST_POOL: ISoulBeastSpecies[] = [
     description: '传说中由道祖点化的金属性至尊魂兽，金身永恒',
     element: '金属性',
   },
+  // 原版687：独立雷属性魂兽
+  ...[
+  {
+    "id": "lei-wen-shu",
+    "name": "雷纹鼠",
+    "areaTier": "outer",
+    "baseHpPerYear": 0.5,
+    "baseAtkPerYear": 0.12,
+    "baseDefPerYear": 0.03,
+    "baseSpdPerYear": 0.28,
+    "skills": [
+      {
+        "name": "静电脉冲",
+        "desc": "释放微弱静电麻痹敌人"
+      }
+    ],
+    "description": "背生雷纹的小型鼠类魂兽，速度极快，接触时会释放静电",
+    "element": "雷属性"
+  },
+  {
+    "id": "dian-jiang-yi",
+    "name": "电浆蚁",
+    "areaTier": "outer",
+    "baseHpPerYear": 0.45,
+    "baseAtkPerYear": 0.13,
+    "baseDefPerYear": 0.02,
+    "baseSpdPerYear": 0.2,
+    "skills": [
+      {
+        "name": "电浆咬",
+        "desc": "口器释放电浆灼烧敌人"
+      }
+    ],
+    "description": "通体流淌电浆的蚁类魂兽，群居，单个虽弱但成群极为可怕",
+    "element": "雷属性"
+  },
+  {
+    "id": "zi-dian-zhi-zhu",
+    "name": "紫电蜘蛛",
+    "areaTier": "outer",
+    "baseHpPerYear": 0.75,
+    "baseAtkPerYear": 0.14,
+    "baseDefPerYear": 0.04,
+    "baseSpdPerYear": 0.16,
+    "skills": [
+      {
+        "name": "雷网束缚",
+        "desc": "吐出带电蛛丝网住敌人"
+      }
+    ],
+    "description": "编织紫电蛛网的小型蜘蛛魂兽，蛛网附带麻痹效果",
+    "element": "雷属性"
+  },
+  {
+    "id": "shan-lei-wa",
+    "name": "闪雷蛙",
+    "areaTier": "outer",
+    "baseHpPerYear": 0.65,
+    "baseAtkPerYear": 0.14,
+    "baseDefPerYear": 0.04,
+    "baseSpdPerYear": 0.24,
+    "skills": [
+      {
+        "name": "雷舌弹射",
+        "desc": "舌头发射电弧击中远处敌人"
+      }
+    ],
+    "description": "身带静电的蛙类魂兽，跳跃时会迸发电花，舌头能远程电击",
+    "element": "雷属性"
+  },
+  {
+    "id": "lei-wen-hu",
+    "name": "雷纹虎",
+    "areaTier": "middle",
+    "baseHpPerYear": 1.1,
+    "baseAtkPerYear": 0.22,
+    "baseDefPerYear": 0.08,
+    "baseSpdPerYear": 0.16,
+    "skills": [
+      {
+        "name": "雷兽咆哮",
+        "desc": "吼声中夹带雷电震伤敌人"
+      }
+    ],
+    "description": "遍布雷纹的虎形魂兽，千年级雷属性猎魂热门选择",
+    "element": "雷属性"
+  },
+  {
+    "id": "dian-yi-sun",
+    "name": "电翼隼",
+    "areaTier": "middle",
+    "baseHpPerYear": 0.85,
+    "baseAtkPerYear": 0.24,
+    "baseDefPerYear": 0.05,
+    "baseSpdPerYear": 0.3,
+    "skills": [
+      {
+        "name": "雷霆俯冲",
+        "desc": "双翼蓄满雷电从高空俯冲而下"
+      }
+    ],
+    "description": "双翼带电的猛禽魂兽，俯冲速度极快，一击即走",
+    "element": "雷属性"
+  },
+  {
+    "id": "zi-dian-kui-she",
+    "name": "紫电蝰蛇",
+    "areaTier": "middle",
+    "baseHpPerYear": 0.9,
+    "baseAtkPerYear": 0.21,
+    "baseDefPerYear": 0.06,
+    "baseSpdPerYear": 0.18,
+    "skills": [
+      {
+        "name": "紫电毒牙",
+        "desc": "毒牙注入紫电毒素麻痹敌人"
+      }
+    ],
+    "description": "通体发紫的剧毒蝰蛇，毒素中夹带雷电，被咬者瞬间僵直",
+    "element": "雷属性"
+  },
+  {
+    "id": "jiu-you-ming-lei-he",
+    "name": "九幽冥雷鹤",
+    "areaTier": "inner",
+    "baseHpPerYear": 0.9,
+    "baseAtkPerYear": 0.27,
+    "baseDefPerYear": 0.07,
+    "baseSpdPerYear": 0.28,
+    "skills": [
+      {
+        "name": "冥雷贯体",
+        "desc": "九幽冥雷汇聚双翼，一冲之下雷火焚身"
+      }
+    ],
+    "description": "幽冥中诞生的黑色雷鹤，通体缠绕冥雷，速度与攻击皆为顶级",
+    "element": "雷属性"
+  },
+  {
+    "id": "lei-guang-jing-xi",
+    "name": "雷光晶犀",
+    "areaTier": "inner",
+    "baseHpPerYear": 1.4,
+    "baseAtkPerYear": 0.23,
+    "baseDefPerYear": 0.15,
+    "baseSpdPerYear": 0.08,
+    "skills": [
+      {
+        "name": "雷霆角撞",
+        "desc": "独角蓄满雷电，正面冲撞粉碎一切"
+      }
+    ],
+    "description": "身披雷光结晶的巨型犀兽，防御厚重，独角可蓄雷爆发",
+    "element": "雷属性"
+  },
+  {
+    "id": "zi-dian-tian-peng",
+    "name": "紫电天鹏",
+    "areaTier": "core",
+    "baseHpPerYear": 1,
+    "baseAtkPerYear": 0.3,
+    "baseDefPerYear": 0.07,
+    "baseSpdPerYear": 0.32,
+    "skills": [
+      {
+        "name": "紫电天击",
+        "desc": "从九霄云外俯冲而下，紫电缠身一击必杀"
+      }
+    ],
+    "description": "十万年级雷属性飞禽类至尊，振翅则紫电千里，速度冠绝魂兽界",
+    "element": "雷属性"
+  },
+  {
+    "id": "hun-dun-lei-long",
+    "name": "混沌雷龙",
+    "areaTier": "life-lake",
+    "baseHpPerYear": 1.35,
+    "baseAtkPerYear": 0.34,
+    "baseDefPerYear": 0.12,
+    "baseSpdPerYear": 0.26,
+    "skills": [
+      {
+        "name": "混沌龙雷",
+        "desc": "混沌与雷霆交织的灭世龙息，可湮灭万物"
+      }
+    ],
+    "description": "诞生于混沌初开之际的雷龙始祖，百万年级魂兽，一啸可引九天雷劫",
+    "element": "雷属性"
+  }
+],
 ];
 
 // 生成魂兽实例（带随机年限、动态属性）
@@ -3395,7 +3585,7 @@ export function generateBeastInstance(areaTier: 'outer' | 'middle' | 'inner' | '
       '光明属性': '光属性', '神圣属性': '光属性', '圣属性': '光属性',
       '黑暗属性': '暗属性', '暗影属性': '暗属性', '亡灵属性': '暗属性',
       '死亡属性': '暗属性', '邪魔属性': '暗属性', '修罗属性': '暗属性', '幽冥属性': '暗属性',
-      '雷属性': '火属性', '雷霆属性': '火属性',
+      '雷属性': '雷属性', '雷霆属性': '雷属性', '电属性': '雷属性',
       '风属性': '木属性', '敏捷属性': '木属性', '毒属性': '木属性', '生命属性': '木属性',
       '混沌属性': '空间属性', '时空属性': '空间属性',
       '神识属性': '精神属性', '灵魂属性': '精神属性', '轮回属性': '精神属性',
@@ -3403,7 +3593,8 @@ export function generateBeastInstance(areaTier: 'outer' | 'middle' | 'inner' | '
     if (map[a]) return map[a];
     if (a.includes('光') || a.includes('明') || a.includes('神圣') || a.includes('圣')) return '光属性';
     if (a.includes('暗') || a.includes('黑暗') || a.includes('死亡') || a.includes('魔') || a.includes('修罗') || a.includes('幽冥')) return '暗属性';
-    if (a.includes('火') || a.includes('雷') || a.includes('炎') || a.includes('焰') || a.includes('赤')) return '火属性';
+    if (a.includes('雷') || a.includes('电')) return '雷属性';
+  if (a.includes('火') || a.includes('炎') || a.includes('焰') || a.includes('赤')) return '火属性';
     if (a.includes('冰') || a.includes('雪') || a.includes('霜') || a.includes('寒')) return '冰属性';
     if (a.includes('水') || a.includes('海') || a.includes('雨') || a.includes('浪')) return '水属性';
     if (a.includes('金') || a.includes('铁') || a.includes('钢')) return '金属性';
@@ -3514,7 +3705,7 @@ export function generateBeastByYearRange(
       '光明属性': '光属性', '神圣属性': '光属性', '圣属性': '光属性',
       '黑暗属性': '暗属性', '暗影属性': '暗属性', '亡灵属性': '暗属性',
       '死亡属性': '暗属性', '邪魔属性': '暗属性', '修罗属性': '暗属性', '幽冥属性': '暗属性',
-      '雷属性': '火属性', '雷霆属性': '火属性',
+      '雷属性': '雷属性', '雷霆属性': '雷属性', '电属性': '雷属性',
       '风属性': '木属性', '敏捷属性': '木属性', '毒属性': '木属性', '生命属性': '木属性',
       '混沌属性': '空间属性', '时空属性': '空间属性',
       '神识属性': '精神属性', '灵魂属性': '精神属性', '轮回属性': '精神属性',
@@ -3522,7 +3713,8 @@ export function generateBeastByYearRange(
     if (map[a]) return map[a];
     if (a.includes('光') || a.includes('明') || a.includes('神圣') || a.includes('圣')) return '光属性';
     if (a.includes('暗') || a.includes('黑暗') || a.includes('死亡') || a.includes('魔') || a.includes('修罗') || a.includes('幽冥')) return '暗属性';
-    if (a.includes('火') || a.includes('雷') || a.includes('炎') || a.includes('焰') || a.includes('赤')) return '火属性';
+    if (a.includes('雷') || a.includes('电')) return '雷属性';
+  if (a.includes('火') || a.includes('炎') || a.includes('焰') || a.includes('赤')) return '火属性';
     if (a.includes('冰') || a.includes('雪') || a.includes('霜') || a.includes('寒')) return '冰属性';
     if (a.includes('水') || a.includes('海') || a.includes('雨') || a.includes('浪')) return '水属性';
     if (a.includes('金') || a.includes('铁') || a.includes('钢')) return '金属性';

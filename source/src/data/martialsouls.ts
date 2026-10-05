@@ -348,7 +348,7 @@ const legendarySouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'
   {
     name: '蓝电霸王龙', quality: 'legendary', type: '兽武魂·强攻系',
     description: '上三宗传承武魂，雷霆霸主，威震大陆',
-    element: '火属性',
+    element: '雷属性',
     baseStats: { attack: 85, defense: 65, speed: 65, spirit: 60, hp: 90 },
   },
   {
@@ -541,7 +541,7 @@ const legendarySouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'
   {
     name: '紫霄神雷', quality: 'legendary', type: '器武魂·强攻系',
     description: '九天神雷之紫霄，雷霆之主，一击出而万雷齐发',
-    element: '火属性',
+    element: '雷属性',
     baseStats: { attack: 92, defense: 50, speed: 90, spirit: 70, hp: 70 },
   },
   {
@@ -733,8 +733,8 @@ const legendarySouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'
   },
   {
     name: '雷霆夔牛', quality: 'legendary', type: '兽武魂·强攻系',
-    description: '火属性，上古夔牛一吼雷鸣千里，雷霆万钧震慑八荒',
-    element: '火属性',
+    description: '雷属性，上古夔牛一吼雷鸣千里，雷霆万钧震慑八荒',
+    element: '雷属性',
     baseStats: { attack: 92, defense: 65, speed: 70, spirit: 70, hp: 90 },
   },
   {
@@ -855,6 +855,7 @@ const epicSouls: Omit<IMartialSoul, 'id' | 'soulSkills' | 'cultivationAttr'>[] =
 // 【显式映射表】元素限定为9种：金、木、水、火、土、光、暗、时间、空间
 // 此表为权威来源，优先级高于关键词自动推导
 const SOUL_ELEMENT_MAP: Record<string, string> = {
+  '寂月仙剑': '雷属性',
   // 超神级
   '天诛剑': '金属性',
   '造化玉蝶': '光属性',
@@ -878,7 +879,7 @@ const SOUL_ELEMENT_MAP: Record<string, string> = {
   '柔骨兔': '木属性',
   '幽冥灵猫': '木属性',
   '邪火凤凰': '火属性',
-  '蓝电霸王龙': '火属性',
+  '蓝电霸王龙': '雷属性',
   '碧磷蛇皇': '木属性',
   '骨龙': '暗属性',
   '死亡蛛皇': '暗属性',
@@ -911,7 +912,7 @@ const SOUL_ELEMENT_MAP: Record<string, string> = {
   '青龙': '水属性',
   '虚无吞炎': '火属性',
   '玄武': '水属性',
-  '紫霄神雷': '火属性',
+  '紫霄神雷': '雷属性',
   '十首火凤凰': '火属性',
   '金眼黑龙': '暗属性',
   '生命之树': '木属性',
@@ -945,7 +946,7 @@ const SOUL_ELEMENT_MAP: Record<string, string> = {
   '黄金叶': '金属性',
   '提丰': '火属性',
   '影戮剑': '暗属性',
-  '雷霆夔牛': '火属性',
+  '雷霆夔牛': '雷属性',
   '斩龙刀': '光属性',
   '星穹灵鹿': '光属性',
   '太虚古龙': '空间属性',
@@ -970,8 +971,9 @@ const SOUL_ELEMENT_MAP: Record<string, string> = {
 // 关键词兜底规则（仅显式映射未覆盖时使用，新增武魂时不必改此表）
 // 元素共10种：金、木、水、火、土、冰、光、暗、时间、空间
 const ELEMENT_RULES: Array<{ keywords: string[]; element: string }> = [
+  {keywords:['雷','霆','紫电','蓝电','寂月仙剑'],element:'雷属性'},
   { keywords: ['冰', '雪', '霜', '寒'], element: '冰属性' },
-  { keywords: ['火', '凤凰', '赤', '炎', '雷', '霆'], element: '火属性' },
+  { keywords: ['火', '凤凰', '赤', '炎'], element: '火属性' },
   { keywords: ['光', '明', '天使', '圣龙', '圣', '星尘'], element: '光属性' },
   { keywords: ['暗', '黑暗', '幽冥', '死亡', '噬魂', '邪魔', '骨龙', '修罗', '魔', '堕'], element: '暗属性' },
   { keywords: ['水', '海', '鲨', '鲸', '河', '沧'], element: '水属性' },
@@ -1142,3 +1144,6 @@ export const MOCK_MARTIAL_SOULS: IMartialSoul[] = [
 ]
 
 MOCK_MARTIAL_SOULS.push(...[{"id":"custom-yaojin-longji","name":"曜金龙戟","quality":"superDivine","type":"器武魂·强攻系","element":"金属性","extremeAttribute":"极致之金","description":"龙纹曜金凝成的战戟，适合以攻击力为核心的正面作战。极致之金沿用现有极致属性规则，魂技效果沿用强攻系规则。","baseStats":{"attack":105,"defense":58,"speed":76,"spirit":72,"hp":94},"soulSkills":["第1魂技·龙锋刺","第2魂技·曜金破阵","第3魂技·龙鳞斩","第4魂技·金戟裂空","第5魂技·百刃归锋","第6魂技·龙吟贯日","武魂真身","第8魂技·万锋镇天","第9魂技·曜金龙皇破"]},{"id":"custom-shuangpo-lingtong","name":"霜魄灵瞳","quality":"superDivine","type":"本体武魂·控制系","element":"精神属性","extremeAttribute":"极致之精神","description":"眼瞳如霜晶，专注精神属性与控制系魂技。技能名称带有霜雪意象，魂环元素仍明确为精神属性，不额外添加未实现的冻结机制。","baseStats":{"attack":60,"defense":60,"speed":78,"spirit":118,"hp":88},"soulSkills":["第1魂技·霜瞳凝念","第2魂技·灵魄束缚","第3魂技·镜雪迷阵","第4魂技·寒念冲击","第5魂技·碎魄凝光","第6魂技·霜心灵域","武魂真身","第8魂技·万念归寂","第9魂技·霜魄神识之剑"]},{"id":"custom-xukong-tiansun","name":"虚空天隼","quality":"superDivine","type":"兽武魂·敏攻系","element":"空间属性","extremeAttribute":"极致之速度","description":"穿梭虚空的天隼，使用速度作为敏攻魂技的修炼方向。空间为元素属性，极致之速度沿用既有被动规则。","baseStats":{"attack":84,"defense":50,"speed":118,"spirit":76,"hp":82},"soulSkills":["第1魂技·隼影突袭","第2魂技·裂空双翼","第3魂技·虚空掠爪","第4魂技·流隙疾冲","第5魂技·千影锋羽","第6魂技·天隼空痕","武魂真身","第8魂技·万羽破界","第9魂技·虚空天隼神化"]},{"id":"custom-zhenyue-xuangui","name":"镇岳玄龟","quality":"superDivine","type":"兽武魂·防御系","element":"土属性","extremeAttribute":"极致之防御","description":"背负山岳纹甲的玄龟，以防御和气血为主要方向。防御系魂技与极致之防御沿用现有规则，不额外添加反伤或无敌机制。","baseStats":{"attack":62,"defense":112,"speed":48,"spirit":66,"hp":126},"soulSkills":["第1魂技·玄甲壁","第2魂技·镇岳盾","第3魂技·磐山墙","第4魂技·厚土玄甲","第5魂技·山岳屏障","第6魂技·玄龟圣盾","武魂真身","第8魂技·镇岳金身","第9魂技·万古玄龟盾"]},{"id":"custom-xinglu-liulilian","name":"星露琉璃莲","quality":"superDivine","type":"植物武魂·辅助系","element":"木属性","extremeAttribute":"极致之木","description":"承接星露的琉璃莲，以精神和生命方向辅助作战。奇数攻击魂技与偶数辅助魂技沿用现有辅助系规则；不额外承诺复活或队伍群体治疗。","baseStats":{"attack":48,"defense":70,"speed":72,"spirit":108,"hp":116},"soulSkills":["第1魂技·星露光矢","第2魂技·琉璃祝福","第3魂技·莲华冲击","第4魂技·星露庇护","第5魂技·青莲审判","第6魂技·琉璃神恩","武魂真身","第8魂技·星露绽放","第9魂技·琉璃莲华神罚"]}] as any);
+
+// 保持已发布武魂ID稳定，追加原版687武魂。
+MOCK_MARTIAL_SOULS.push({"name":"寂月仙剑","quality":"supremeDivine","type":"器武魂·强攻系","description":"月华凝铸而成的至高神级长剑，刃间暗伏紫电，既可挥洒凌厉剑势，亦可引雷霆侵扰神魂。特殊天赋【雷霆战意】：每战胜一名敌人，攻击力永久提升1%，无上限。","extremeAttribute":"极致之雷","element":"雷属性","baseStats":{"attack":120,"defense":70,"speed":90,"spirit":150,"hp":110},"customSoulSkills":["第1魂技·月刃斩","第2魂技·紫电突刺","第3魂技·雷霆半月斩","第4魂技·月影连斩","第5魂技·寂月惊雷","第6魂技·紫电领域","武魂真身·寂月仙剑","第8魂技·万雷天牢","第9魂技·寂月神罚"],"id":"supreme-jiyue-xianjian","soulSkills":["第1魂技·月刃斩","第2魂技·紫电突刺","第3魂技·雷霆半月斩","第4魂技·月影连斩","第5魂技·寂月惊雷","第6魂技·紫电领域","武魂真身·寂月仙剑","第8魂技·万雷天牢","第9魂技·寂月神罚"],"cultivationAttr":"strength"} as IMartialSoul);

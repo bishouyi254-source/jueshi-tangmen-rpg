@@ -141,10 +141,11 @@ const ARTIFACT_DETAILS: ArtifactDetail[] = [
 ];
 const ATTR_LIST = [
   '金属性', '木属性', '水属性', '火属性', '土属性',
-  '冰属性', '光属性', '暗属性', '时间属性', '空间属性', '精神属性',
+  '雷属性', '冰属性', '光属性', '暗属性', '时间属性', '空间属性', '精神属性',
 ];
 
 const ATTR_COLORS: Record<string, string> = {
+  '雷属性': 'text-violet-300 bg-violet-900/30 border-violet-500/40',
   '金属性': 'text-amber-300 bg-amber-900/30 border-amber-500/40',
   '木属性': 'text-green-300 bg-green-900/30 border-green-500/40',
   '水属性': 'text-blue-300 bg-blue-900/30 border-blue-500/40',

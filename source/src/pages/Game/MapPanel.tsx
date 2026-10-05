@@ -269,7 +269,7 @@ const DUNGEON_THEMES: Record<number, { beasts: { name: string; attr: string; yea
     beasts: [
       { name: '玄铁龙', attr: '金属性', years: 12000 },
       { name: '剑齿虎王', attr: '金属性', years: 20000 },
-      { name: '雷霆兽', attr: '火属性', years: 40000 },
+      { name: '雷霆兽', attr: '雷属性', years: 40000 },
       { name: '神玉麒麟', attr: '光属性', years: 60000 },
     ],
   },
@@ -278,7 +278,7 @@ const DUNGEON_THEMES: Record<number, { beasts: { name: string; attr: string; yea
     beasts: [
       { name: '陨星巨兽', attr: '光属性', years: 120000 },
       { name: '骨龙', attr: '暗属性', years: 150000 },
-      { name: '雷狱守卫', attr: '火属性', years: 200000 },
+      { name: '雷狱守卫', attr: '雷属性', years: 200000 },
       { name: '星核之灵', attr: '空间属性', years: 300000 },
     ],
   },
@@ -314,7 +314,7 @@ const DUNGEON_THEMES: Record<number, { beasts: { name: string; attr: string; yea
     beasts: [
       { name: '神王残魂', attr: '光属性', years: 1100000 },
       { name: '审判天使', attr: '光属性', years: 1200000 },
-      { name: '寂灭雷神', attr: '火属性', years: 1500000 },
+      { name: '寂灭雷神', attr: '雷属性', years: 1500000 },
       { name: '神界守护兽', attr: '光属性', years: 2000000 },
     ],
   },
@@ -3453,6 +3453,7 @@ export default function MapPanel() {
        { key: '金属性', name: '金', color: '#fbbf24', icon: '金' },
        { key: '木属性', name: '木', color: '#4ade80', icon: '木' },
        { key: '水属性', name: '水', color: '#60a5fa', icon: '水' },
+       { key: '雷属性', name: '雷', color: '#c4b5fd', icon: '雷' },
        { key: '火属性', name: '火', color: '#f87171', icon: '火' },
        { key: '土属性', name: '土', color: '#a78bfa', icon: '土' },
        { key: '冰属性', name: '冰', color: '#67e8f9', icon: '冰' },

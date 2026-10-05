@@ -1,3 +1,4 @@
+import {jiYueCount,applyJiYueAttack,settleJiYueVictory} from './jiYue';
 import {readTwin,twinBonuses,createTwinBattle,settleTwin,extendTwinDomain} from './twinDragon';
 import {elementSet,resonance,extremeMultipliers} from './attributeRules';
 import {normalizeSilver,readSilverBlood,reincarnateSilver,silverBonuses,createSilverBattle,settleSilver,SILVER_ELEMENTS} from './silverKing';
@@ -397,7 +398,7 @@ export function getSecondSoulMaxYears(level: number): number {
 // 【规定】游戏内元素共11种：金、木、水、火、土、冰、光、暗、时间、空间、精神
 // 冰属性与水属性互不归属，各自独立
 // 精神属性为独立元素（精神系武魂/魂兽专属，如灵眸、邪眼等）
-// 映射关系：雷→火、风→木、光明→光、黑暗→暗、混沌→空间、毒→木、生命→木、全属性→光
+// 雷为独立属性；风→木、光明→光、黑暗→暗、混沌→空间、毒→木、生命→木、全属性→光
 // 雪/霜/极寒/极冰 → 冰属性
 export function normalizeBeastAttribute(attr: string | undefined): string {
   if (!attr) return '无属性';
@@ -431,8 +432,8 @@ export function normalizeBeastAttribute(attr: string | undefined): string {
     // 冰系 → 冰属性（独立，不再归水）
     '极冰属性': '冰属性', '极寒属性': '冰属性', '雪属性': '冰属性',
     '霜属性': '冰属性', '寒冰属性': '冰属性', '冰晶属性': '冰属性',
-    // 雷 → 火
-    '雷属性': '火属性', '雷霆属性': '火属性',
+    // 雷为独立属性
+    '雷属性': '雷属性', '雷霆属性': '雷属性', '电属性': '雷属性',
     // 风 → 木
     '风属性': '木属性', '敏捷属性': '木属性',
     // 毒 → 木
@@ -459,7 +460,8 @@ export function normalizeBeastAttribute(attr: string | undefined): string {
   // 兜底：再尝试关键词模糊匹配
   if (a.includes('光') || a.includes('明') || a.includes('神圣') || a.includes('圣')) return '光属性';
   if (a.includes('暗') || a.includes('黑暗') || a.includes('死亡') || a.includes('魔') || a.includes('修罗') || a.includes('幽冥')) return '暗属性';
-  if (a.includes('火') || a.includes('雷') || a.includes('炎') || a.includes('焰') || a.includes('赤')) return '火属性';
+  if (a.includes('雷') || a.includes('电')) return '雷属性';
+  if (a.includes('火') || a.includes('炎') || a.includes('焰') || a.includes('赤')) return '火属性';
   // 冰属性独立（优先级高于水，避免冰/雪/霜被水吞掉）
   if (a.includes('冰') || a.includes('雪') || a.includes('霜') || a.includes('寒')) return '冰属性';
   if (a.includes('水') || a.includes('海') || a.includes('雨') || a.includes('浪')) return '水属性';
@@ -801,6 +803,8 @@ export interface IPlayer {
   /** 本世击败混沌茶；独立于可移除的伴侣记录。 */
   hundunChaDefeated?: boolean;
   nianBonus?: NianBonus;
+  jiYueVictories?: number;
+  jiYueLastBattleId?: string;
   sweepAutoDestroyRingYears?: number;
   sweepAutoSellBoneYears?: number;
    /** 一键扫荡探索次数记录：key 为区域标识（如 star-outer / beiji-inner / million-year），value 为累计进入次数 */
@@ -1233,7 +1237,8 @@ const ELEMENT_COUNTER: Record<string, { generates: string[]; restrains: string[]
 /** 标准化属性名：去掉"属性"后缀，统一为裸属性名 */
 function normalizeElement(attr: string | undefined): string {
   if (!attr) return '';
-  return attr.replace(/属性$/, '').replace(/极致之/, '');
+  const value=attr.replace(/属性$/, '').replace(/极致之/, '');
+  return ['雷霆','电'].includes(value)?'雷':value;
 }
 
 /**
@@ -2247,6 +2252,7 @@ export function calcAttributes(player: IPlayer): IAttrs {
     }
     const supremeCount = (player.divineTrial?.supremeArtifacts ?? []).length;
 
+    attack = applyJiYueAttack(player,attack);
     return {
       attack: Math.round(attack),
       defense: Math.round(defense),
@@ -3048,6 +3054,7 @@ export function calcDomainBonus(domain: IDomain | null, level: number): DomainBo
 // 🔴 重要：新生成的魂环/魂骨严格优先使用 element；inferElementFromName 仅作为老存档迁移兜底
 // 多字关键词必须排在短关键词前面，避免短词抢先匹配
 const ATTRIBUTE_RULES: Array<{ keywords: string[]; element: string }> = [
+  {keywords:['雷','霆','紫电','蓝电','寂月仙剑','电浆','电翼'],element:'雷属性'},
   { keywords: ['精神', '灵眸', '摄魂', '神识', '轮回', '心灵', '念力', '噬魂', '邪眼', '梦貘', '忘川', '夺魄', '梦游', '双头灵蜥', '灵渊九尾狐', '破念明王'], element: '精神属性' },
   { keywords: ['三眼金猊', '虚空', '太虚', '古龙', '混沌', '空间', '次元', '时空虫', '时空裂狼', '时空之主'], element: '空间属性' },
   { keywords: ['时间', '春秋', '蝉', '时之蛇', '钟表精', '时光', '轮回盘'], element: '时间属性' },
@@ -3057,7 +3064,8 @@ const ATTRIBUTE_RULES: Array<{ keywords: string[]; element: string }> = [
   { keywords: ['光明', '天使', '神圣圣龙', '光', '神圣', '星尘', '琉璃', '翡翠天鹅', '圣音灵雀', '日耀天马', '碧姬', '圣龙'], element: '光属性' },
   { keywords: ['冰碧', '冰帝', '冰', '雪', '寒冰', '霜', '寒'], element: '冰属性' },
   { keywords: ['水', '海', '鲨', '鲸', '河', '沧', '碧水蟾'], element: '水属性' },
-  { keywords: ['火', '凤凰', '赤', '炎', '焰', '雷', '霆', '雷霆', '炼狱神皇', '紫雷'], element: '火属性' },
+  { keywords: ['雷','霆','紫电','蓝电','寂月仙剑'], element:'雷属性' },
+  { keywords: ['火', '凤凰', '赤', '炎', '焰', '炼狱神皇'], element: '火属性' },
   { keywords: ['金', '铁', '钢', '玄铁', '龙枪', '剑', '枪', '棍', '斧', '矛', '刃', '昊天锤', '黄金叶', '斩龙', '银甲兽', '铁甲', '钢刺'], element: '金属性' },
   { keywords: ['土', '玄龟', '牛', '熊', '犀', '鼎', '石', '岩', '山', '金刚', '饕餮', '板甲', '盘龙', '镇魂', '泰坦巨猿', '巨力玄猿', '狂暴猛犸', '霸王战猿', '大地之王', '镇岳龟猿', '猛犸', '铁角蛮牛'], element: '土属性' },
   { keywords: ['毒', '蛇皇', '蛛皇', '碧磷', '蟾', '蛛', '植物', '草', '树', '藤', '蓝银', '生命', '风', '燕', '猫鹰', '疾风', '柔骨', '幽冥灵猫', '九凤', '曼陀罗蛇', '食人花妖'], element: '木属性' },
@@ -3814,6 +3822,7 @@ interface GameContextValue {
     exploreTeaNode: (nodeId: string) => { success: boolean; reason?: string; encounterId?: string; expGained?: number; coinGained?: number };
     setSweepFilters: (ringYears: number, boneYears: number) => void;
     settleLiehunVictory: (ledger: LiehunLedger, phase: string) => void;
+    settleJiYueBattle: (id: string, phase: string) => void;
     /** 一键扫荡：模拟多个节点探索，返回所有掉落 */
     sweepExplore: (areaKey: string, params: {
       yearMin: number;
@@ -5991,6 +6000,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         const newPlayer: IPlayer = {
           ...baseP,
+          jiYueVictories: jiYueCount(player),
+          jiYueLastBattleId: player.jiYueLastBattleId,
           dragonLegend: reincarnateDragon(player),
           abyssFrontier: reincarnateAbyss(player),
           twinResonance:readTwin(player.twinResonance),dragonBloodline: reincarnateBloodline(player),dragonValley:reincarnateValley(player),goldBlood:readGoldBlood(player.goldBlood),silverBloodline:reincarnateSilver(player),
@@ -8954,6 +8965,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
    };
 
    const setSweepFilters = (ringYears: number, boneYears: number) => { setPlayer(p=>p?{...p,sweepAutoDestroyRingYears:normalizeSweepYears(ringYears),sweepAutoSellBoneYears:normalizeSweepYears(boneYears)}:p); };
+   const settleJiYueBattle = useCallback((id: string,phase: string)=>{setPlayer(p=>p?settleJiYueVictory(p,id,phase):p);},[]);
    const settleLiehunVictory = useCallback((ledger: LiehunLedger, phase: string) => {setPlayer(p=>p?settleLiehunGrowth(p,ledger,phase):p);},[]);
    const sweepExplore = (
      areaKey: string,
@@ -11055,7 +11067,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       logs: [],
       updatedAt: Date.now(),
       exploreSource: config.exploreSource,
-      meta: { ...config.meta, liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()),twinBattle:createTwinBattle(player,config,crypto.randomUUID()),goldBattle:extendTwinDomain(player,createGoldBattle(player,config,player?calcAttributes(player).hp:1,crypto.randomUUID())),silverBattle:extendTwinDomain(player,createSilverBattle(player,config,crypto.randomUUID())) },
+      meta: { ...config.meta, jiYueBattleId: crypto.randomUUID(), liehunGrowth: createLiehunLedger(player, config.meta, crypto.randomUUID()),twinBattle:createTwinBattle(player,config,crypto.randomUUID()),goldBattle:extendTwinDomain(player,createGoldBattle(player,config,player?calcAttributes(player).hp:1,crypto.randomUUID())),silverBattle:extendTwinDomain(player,createSilverBattle(player,config,crypto.randomUUID())) },
     });
     setInBattle(true);
   };
@@ -11635,7 +11647,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         unlockGodLevelCultivation, canUnlockGodLevel, chooseLawFragment, fuseLaw,
         godBreakthrough, isGodBottleneck, getFusedLawsCount, getGodLevelCap,
        // 一键扫荡
-       setSweepFilters, settleLiehunVictory, sweepExplore, getSweepCount, incrementSweepCount,
+       setSweepFilters, settleLiehunVictory, settleJiYueBattle, sweepExplore, getSweepCount, incrementSweepCount,
        // 轮回之影
        getReincarnationShadow, hasShadowChallengedToday, startShadowChallenge, claimShadowVictory,
       // 成就系统
@@ -11774,7 +11786,7 @@ export function useGame(): GameContextValue {
        pendingTeaFavorId: null,
        teaNodeCooldowns: {},
        exploreTeaNode: () => ({ success: false, reason: '未初始化' }),
-       setSweepFilters: () => {}, settleLiehunVictory: () => {},
+       setSweepFilters: () => {}, settleLiehunVictory: () => {}, settleJiYueBattle: () => {},
        sweepExplore: () => ({ success: false, reason: '未初始化' }),
        getSweepCount: () => 0,
        incrementSweepCount: () => {},
@@ -11839,8 +11851,8 @@ function __localBoneGrowth(bone,newYears,slot){
 }
 
 export function localRingGrowthStats(ring:any, years:number, type=ring.originalBeastType||ring.beastType||'qiang') {const stats=calcRingStatsByYears(years,type,{deterministic:true});for(const key of ['attackBonus','defenseBonus','speedBonus','spiritBonus','hpBonus','critRateBonus','critDmgBonus','soulPowerBonus','skillDamage'])if(Number.isFinite(ring[key]))stats[key]=Math.max(stats[key],ring[key]);return stats;}
-const localBeastElements={"风尾鸡冠蛇":"木属性","时序夜狼":"时间属性","铁角蛮牛":"土属性","曼陀罗蛇":"木属性","柔骨媚兔":"木属性","钢毛刚猪":"金属性","青风雉":"木属性","岩角羚羊":"土属性","疾风蜂雀":"木属性","钢刺豪猪":"土属性","光明圣鹰":"光属性","精铁灵猴":"金属性","金晶兽":"金属性","青藤蟒":"木属性","碧水蟾":"水属性","赤炎鼠":"火属性","岩石傀儡":"土属性","冰蚕":"冰属性","雷霆鸟":"火属性","御风兔":"木属性","光明蝶(幼体)":"光属性","深海水纹蝠":"水属性","灵眸兔":"精神属性","混沌虫":"空间属性","时空虫":"空间属性","虚空兔":"空间属性","时之蛇":"时间属性","时光虫":"时间属性","钟表精":"时间属性","空间刃蝎":"空间属性","虚空灵":"空间属性","金铁兽":"金属性","银甲兽":"金属性","缠魂藤蔓":"木属性","古树精":"木属性","水之元素":"水属性","水灵精":"水属性","火之元素":"火属性","火灵精":"火属性","土之元素":"土属性","磐岩怪":"土属性","冰之元素":"冰属性","冰霜雪狼":"冰属性","雷之元素":"火属性","紫电鳗":"火属性","风之精灵":"木属性","凌风雀":"木属性","光之元素":"光属性","圣光神鹿":"光属性","虚空元素":"空间属性","玄铁幽狼":"金属性","精神元素":"精神属性","念力玄兽":"精神属性","心灵幻蝶":"精神属性","梦游兽":"精神属性","时光蝶":"时间属性","岁月狼":"时间属性","虚空魔狼":"空间属性","次元兽":"空间属性","人面魔蛛":"木属性","赤焰鬼虎":"火属性","铁甲鳞兽":"土属性","赤焰狮王":"火属性","冰碧蝎(幼体)":"冰属性","独角蛮牛":"土属性","疾风魔豹":"木属性","赤甲火兽":"火属性","九毒雾蛇":"木属性","寒水玄蛟":"冰属性","圣光灵鹿":"光属性","虚空魔蝠":"空间属性","时空裂狼":"空间属性","岁月兽":"时间属性","时光天鹅":"时间属性","空间龙牙兽":"空间属性","虚无噬鲲":"空间属性","泰坦巨猿":"土属性","天青牛蟒":"火属性","暗魔邪神虎":"暗属性","三眼金猊":"空间属性","冰碧帝皇蝎":"冰属性","黄金玳瑁":"金属性","赤甲火龙":"火属性","紫雷魔狼":"火属性","骸骨邪龙":"暗属性","玄金狮王":"金属性","沧海玄鲲":"水属性","泰坦巨猿王":"土属性","天青牛蟒神":"火属性","十万年暗魔邪神虎":"暗属性","人面魔蛛皇":"暗属性","邪魔虎鲸王":"暗属性","魔魂大白鲨王":"暗属性","冰碧蝎王":"冰属性","金眼黑龙王":"暗属性","赤甲龙皇":"火属性","紫雷魔狼王":"火属性","黄金玳瑁王":"金属性","三眼金猊王":"空间属性","光明神龙":"光属性","百炼金刚":"金属性","金眼黑龙王·帝天":"暗属性","翡翠天鹅·碧姬":"光属性","妖眼魔树·万妖王":"木属性","暗金恐爪熊王·熊君":"暗属性","三头赤魔獒·赤王":"火属性","冰碧帝皇蝎·冰帝":"冰属性","冰天雪女·雪帝":"冰属性","邪眼暴君主宰·邪帝":"精神属性","忘川幽灵":"精神属性","极玄冰兽":"冰属性","紫姬·魔后":"暗属性","金刚貔貅":"金属性","光明天使":"光属性","暴力棕熊":"土属性","钢铁甲龟":"土属性","光辉圣鹿":"光属性","寒冰蝰蛇":"冰属性","炎火狂狼":"火属性","水晶水獭":"水属性","雷云玄豹":"火属性","岩土幽鼠":"土属性","噬魔花蝶":"木属性","幻影蝠":"精神属性","巨力玄猿":"土属性","玄甲岩犀":"土属性","圣音灵雀":"光属性","玄冰碧虎":"冰属性","炽焰蛮牛":"火属性","苍浪玄蛟":"水属性","紫雷神猿":"火属性","金翅神鹰":"金属性","圣光冠雀":"光属性","双头灵蜥":"精神属性","铁背地龙":"金属性","食人花妖":"木属性","海马圣兽":"水属性","碧波玄龟":"水属性","烈火杏娇疏":"火属性","大力金刚熊":"金属性","玄冰玉螈":"冰属性","蓝电霸王龙(幼体)":"火属性","尖尾雨燕":"木属性","光明女神蝶(幼体)":"光属性","幽冥灵猫":"暗属性","灵眸兽":"精神属性","噬魂蛛":"精神属性","幻心狐":"精神属性","混沌精":"空间属性","狂暴猛犸":"土属性","影风玄雕":"木属性","极光灵猴":"精神属性","玄山刚龟":"土属性","圣树灵驹":"木属性","寒锋冰狼":"冰属性","炎啸狂狮":"火属性","碧磷蝎王":"木属性","玄金鳞蛇":"金属性","旋风裂隼":"木属性","金刚虎王":"金属性","噬魂蛛皇":"木属性","魔魂大白鲨":"水属性","空间撕裂兽":"空间属性","时间沙漏兽":"时间属性","十首火凤凰":"火属性","饕餮神牛":"土属性","冰天雪女":"冰属性","紫霄神雷兽":"火属性","风之精灵王":"木属性","六翼天使":"光属性","死亡蛛皇":"暗属性","轮回天眼兽":"精神属性","心魔瞳兽":"精神属性","夺魄玄鹤":"精神属性","混沌兽":"空间属性","霸王战猿":"土属性","青风猛虎":"木属性","精神龙王":"空间属性","镇殿玄龟":"土属性","圣光天鹅":"光属性","冰雪天女":"冰属性","炎凰":"火属性","震雷麒麟":"火属性","灵渊九尾狐":"精神属性","黄金圣龙":"光属性","千毒木王":"木属性","狂铁血豹":"金属性","混沌噬":"空间属性","金刚圣龙":"金属性","白金比蒙":"金属性","世界树守卫":"木属性","翡翠天鹅":"光属性","深海魔鲸王":"水属性","涅槃凤凰":"火属性","烈焰焚天牛":"火属性","大地之王":"土属性","雪帝":"冰属性","冰极霜灭龙":"冰属性","雷霆夔牛":"火属性","风神·千羽":"木属性","光明圣龙":"光属性","神圣天使":"光属性","黑暗圣龙":"暗属性","堕天使":"暗属性","终焉暗龙":"暗属性","摄魂铃魔":"精神属性","梦貘":"精神属性","破念明王":"精神属性","混沌古龙":"空间属性","天诛剑灵":"空间属性","虚空古龙":"空间属性","时空之主":"空间属性","岁月守护者":"时间属性","时光沙漏兽":"时间属性","空间之王":"空间属性","次元神兽":"空间属性","时光古龙":"时间属性","古冰神兽":"冰属性","炼狱神皇":"火属性","苍海神蛟":"水属性","泰山兽":"土属性","九天雷神兽":"火属性","大光明神龙":"光属性","冥渊神帝":"暗属性","百毒神木":"木属性","混沌天地":"空间属性","混沌时空龙":"空间属性","玄水玄武龟":"水属性","蓝海兽王":"水属性","极寒鲸鳄":"水属性","沧龙君":"水属性","神水天蛇":"水属性","岁月蝶":"时间属性","逆光纪":"时间属性","永恒钟魂":"时间属性","轮回盘":"时间属性","光明神鹤":"光属性","日耀天马":"光属性","百炼钢君":"金属性","五行剑猴":"金属性","镇岳龟猿":"土属性","黄土大神":"土属性","梦幻天蛛":"精神属性","金毛蜥":"金属性","铁臂螳螂":"金属性","铜甲鼠":"金属性","幽冥影猫":"暗属性","黑焰蛇":"暗属性","魔域乌鸦":"暗属性","钢甲犀牛":"金属性","金翅大鹏":"金属性","玄铁剑齿虎":"金属性","黑魔狼":"暗属性","魔云鹫":"暗属性","金纹神蟒":"金属性","白金圣虎":"金属性","刚烈熊":"金属性","金晶麒麟":"金属性","玄铁巨龙":"金属性","金刚不坏熊":"金属性","金角巨兽":"金属性","五行剑圣":"金属性","太上金身":"金属性"};
-export function localBeastElement(element,name){const known=new Set(['金属性','木属性','水属性','火属性','土属性','冰属性','光属性','暗属性','时间属性','空间属性','精神属性']);const explicit=normalizeBeastAttribute(element);if(known.has(explicit))return explicit;const species=normalizeBeastAttribute(localBeastElements[name]);if(known.has(species))return species;return normalizeBeastAttribute(inferElementFromName(name||''));}
+const localBeastElements={"风尾鸡冠蛇":"木属性","时序夜狼":"时间属性","铁角蛮牛":"土属性","曼陀罗蛇":"木属性","柔骨媚兔":"木属性","钢毛刚猪":"金属性","青风雉":"木属性","岩角羚羊":"土属性","疾风蜂雀":"木属性","钢刺豪猪":"土属性","光明圣鹰":"光属性","精铁灵猴":"金属性","金晶兽":"金属性","青藤蟒":"木属性","碧水蟾":"水属性","赤炎鼠":"火属性","岩石傀儡":"土属性","冰蚕":"冰属性","雷霆鸟":"雷属性","御风兔":"木属性","光明蝶(幼体)":"光属性","深海水纹蝠":"水属性","灵眸兔":"精神属性","混沌虫":"空间属性","时空虫":"空间属性","虚空兔":"空间属性","时之蛇":"时间属性","时光虫":"时间属性","钟表精":"时间属性","空间刃蝎":"空间属性","虚空灵":"空间属性","金铁兽":"金属性","银甲兽":"金属性","缠魂藤蔓":"木属性","古树精":"木属性","水之元素":"水属性","水灵精":"水属性","火之元素":"火属性","火灵精":"火属性","土之元素":"土属性","磐岩怪":"土属性","冰之元素":"冰属性","冰霜雪狼":"冰属性","雷之元素":"雷属性","紫电鳗":"雷属性","风之精灵":"木属性","凌风雀":"木属性","光之元素":"光属性","圣光神鹿":"光属性","虚空元素":"空间属性","玄铁幽狼":"金属性","精神元素":"精神属性","念力玄兽":"精神属性","心灵幻蝶":"精神属性","梦游兽":"精神属性","时光蝶":"时间属性","岁月狼":"时间属性","虚空魔狼":"空间属性","次元兽":"空间属性","人面魔蛛":"木属性","赤焰鬼虎":"火属性","铁甲鳞兽":"土属性","赤焰狮王":"火属性","冰碧蝎(幼体)":"冰属性","独角蛮牛":"土属性","疾风魔豹":"木属性","赤甲火兽":"火属性","九毒雾蛇":"木属性","寒水玄蛟":"冰属性","圣光灵鹿":"光属性","虚空魔蝠":"空间属性","时空裂狼":"空间属性","岁月兽":"时间属性","时光天鹅":"时间属性","空间龙牙兽":"空间属性","虚无噬鲲":"空间属性","泰坦巨猿":"土属性","天青牛蟒":"火属性","暗魔邪神虎":"暗属性","三眼金猊":"空间属性","冰碧帝皇蝎":"冰属性","黄金玳瑁":"金属性","赤甲火龙":"火属性","紫雷魔狼":"火属性","骸骨邪龙":"暗属性","玄金狮王":"金属性","沧海玄鲲":"水属性","泰坦巨猿王":"土属性","天青牛蟒神":"火属性","十万年暗魔邪神虎":"暗属性","人面魔蛛皇":"暗属性","邪魔虎鲸王":"暗属性","魔魂大白鲨王":"暗属性","冰碧蝎王":"冰属性","金眼黑龙王":"暗属性","赤甲龙皇":"火属性","紫雷魔狼王":"火属性","黄金玳瑁王":"金属性","三眼金猊王":"空间属性","光明神龙":"光属性","百炼金刚":"金属性","金眼黑龙王·帝天":"暗属性","翡翠天鹅·碧姬":"光属性","妖眼魔树·万妖王":"木属性","暗金恐爪熊王·熊君":"暗属性","三头赤魔獒·赤王":"火属性","冰碧帝皇蝎·冰帝":"冰属性","冰天雪女·雪帝":"冰属性","邪眼暴君主宰·邪帝":"精神属性","忘川幽灵":"精神属性","极玄冰兽":"冰属性","紫姬·魔后":"暗属性","金刚貔貅":"金属性","光明天使":"光属性","暴力棕熊":"土属性","钢铁甲龟":"土属性","光辉圣鹿":"光属性","寒冰蝰蛇":"冰属性","炎火狂狼":"火属性","水晶水獭":"水属性","雷云玄豹":"雷属性","岩土幽鼠":"土属性","噬魔花蝶":"木属性","幻影蝠":"精神属性","巨力玄猿":"土属性","玄甲岩犀":"土属性","圣音灵雀":"光属性","玄冰碧虎":"冰属性","炽焰蛮牛":"火属性","苍浪玄蛟":"水属性","紫雷神猿":"雷属性","金翅神鹰":"金属性","圣光冠雀":"光属性","双头灵蜥":"精神属性","铁背地龙":"金属性","食人花妖":"木属性","海马圣兽":"水属性","碧波玄龟":"水属性","烈火杏娇疏":"火属性","大力金刚熊":"金属性","玄冰玉螈":"冰属性","蓝电霸王龙(幼体)":"雷属性","尖尾雨燕":"木属性","光明女神蝶(幼体)":"光属性","幽冥灵猫":"暗属性","灵眸兽":"精神属性","噬魂蛛":"精神属性","幻心狐":"精神属性","混沌精":"空间属性","狂暴猛犸":"土属性","影风玄雕":"木属性","极光灵猴":"精神属性","玄山刚龟":"土属性","圣树灵驹":"木属性","寒锋冰狼":"冰属性","炎啸狂狮":"火属性","碧磷蝎王":"木属性","玄金鳞蛇":"金属性","旋风裂隼":"木属性","金刚虎王":"金属性","噬魂蛛皇":"木属性","魔魂大白鲨":"水属性","空间撕裂兽":"空间属性","时间沙漏兽":"时间属性","十首火凤凰":"火属性","饕餮神牛":"土属性","冰天雪女":"冰属性","紫霄神雷兽":"雷属性","风之精灵王":"木属性","六翼天使":"光属性","死亡蛛皇":"暗属性","轮回天眼兽":"精神属性","心魔瞳兽":"精神属性","夺魄玄鹤":"精神属性","混沌兽":"空间属性","霸王战猿":"土属性","青风猛虎":"木属性","精神龙王":"空间属性","镇殿玄龟":"土属性","圣光天鹅":"光属性","冰雪天女":"冰属性","炎凰":"火属性","震雷麒麟":"雷属性","灵渊九尾狐":"精神属性","黄金圣龙":"光属性","千毒木王":"木属性","狂铁血豹":"金属性","混沌噬":"空间属性","金刚圣龙":"金属性","白金比蒙":"金属性","世界树守卫":"木属性","翡翠天鹅":"光属性","深海魔鲸王":"水属性","涅槃凤凰":"火属性","烈焰焚天牛":"火属性","大地之王":"土属性","雪帝":"冰属性","冰极霜灭龙":"冰属性","雷霆夔牛":"雷属性","风神·千羽":"木属性","光明圣龙":"光属性","神圣天使":"光属性","黑暗圣龙":"暗属性","堕天使":"暗属性","终焉暗龙":"暗属性","摄魂铃魔":"精神属性","梦貘":"精神属性","破念明王":"精神属性","混沌古龙":"空间属性","天诛剑灵":"空间属性","虚空古龙":"空间属性","时空之主":"空间属性","岁月守护者":"时间属性","时光沙漏兽":"时间属性","空间之王":"空间属性","次元神兽":"空间属性","时光古龙":"时间属性","古冰神兽":"冰属性","炼狱神皇":"火属性","苍海神蛟":"水属性","泰山兽":"土属性","九天雷神兽":"雷属性","大光明神龙":"光属性","冥渊神帝":"暗属性","百毒神木":"木属性","混沌天地":"空间属性","混沌时空龙":"空间属性","玄水玄武龟":"水属性","蓝海兽王":"水属性","极寒鲸鳄":"水属性","沧龙君":"水属性","神水天蛇":"水属性","岁月蝶":"时间属性","逆光纪":"时间属性","永恒钟魂":"时间属性","轮回盘":"时间属性","光明神鹤":"光属性","日耀天马":"光属性","百炼钢君":"金属性","五行剑猴":"金属性","镇岳龟猿":"土属性","黄土大神":"土属性","梦幻天蛛":"精神属性","金毛蜥":"金属性","铁臂螳螂":"金属性","铜甲鼠":"金属性","幽冥影猫":"暗属性","黑焰蛇":"暗属性","魔域乌鸦":"暗属性","钢甲犀牛":"金属性","金翅大鹏":"金属性","玄铁剑齿虎":"金属性","黑魔狼":"暗属性","魔云鹫":"暗属性","金纹神蟒":"金属性","白金圣虎":"金属性","刚烈熊":"金属性","金晶麒麟":"金属性","玄铁巨龙":"金属性","金刚不坏熊":"金属性","金角巨兽":"金属性","五行剑圣":"金属性","太上金身":"金属性"};
+export function localBeastElement(element,name){const known=new Set(['雷属性','金属性','木属性','水属性','火属性','土属性','冰属性','光属性','暗属性','时间属性','空间属性','精神属性']);const explicit=normalizeBeastAttribute(element);if(known.has(explicit))return explicit;const species=normalizeBeastAttribute(localBeastElements[name]);if(known.has(species))return species;return normalizeBeastAttribute(inferElementFromName(name||''));}
 
 export function localPendingLawChoices(level:number,dt:any){const earned=Math.min(27,Math.max(0,Math.floor((level-100)/2)));const claimed=['time','space','gold','wood','water','fire','earth','light','dark'].reduce((sum,k)=>sum+(dt?.lawFragments?.[k]||0)+(dt?.lawsFused?.[k]?3:0),0);return Math.max(0,earned-claimed);}
 
